@@ -87,7 +87,7 @@
           检测您的 Shell 脚本安全问题
         </h2>
         <p class="text-gray-600 text-lg mb-8">
-          上传单个.sh文件或包含多个.sh文件的.zip文件，我们将检测其中是否包含危险命令
+          上传单个.sh文件或包含多个.sh文件的.zip（magisk模块）文件，我们将检测其中是否包含危险命令
         </p>
       </div>
     </section>
@@ -221,7 +221,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">高风险命令</h4>
               <p class="text-gray-600 text-sm">
-                rm -rf, rm -fr, dd if=/dev/zero, mkfs., shutdown, reboot, halt, poweroff, kill -9, 直接修改系统配置文件等
+                rm -rf, rm -fr, dd if=/dev/zero, mkfs., shutdown, reboot, halt, poweroff, kill -9, 直接修改系统配置文件, cat * > * 等
               </p>
               <div class="mt-2 p-3 bg-gray-50 rounded text-xs">
                 <p class="text-gray-600"><span class="font-medium">例外情况：</span> rm -rf /data/adb/* 是删除Magisk模块缓存文件，不属于危险命令</p>
@@ -236,7 +236,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">中风险命令</h4>
               <p class="text-gray-600 text-sm">
-                chmod, chown, chgrp, sudo, su, 网络访问命令(wget, curl), 临时文件操作等
+                chmod, chown, chgrp, sudo, su, 网络访问命令(wget, curl), 临时文件操作, cat * >> *, cp 等
               </p>
             </div>
           </div>
@@ -269,7 +269,7 @@
           <p class="text-gray-400 text-sm mt-2">保护您的Shell脚本安全</p>
         </div>
         <div class="flex space-x-6">
-          <a href="#" class="text-gray-400 hover:text-white transition-colors">
+          <a href="https://github.com/Tobapuww/Tobapuww.github.io" target="_blank" class="text-gray-400 hover:text-white transition-colors">
             <i class="fa fa-github text-xl"></i>
           </a>
           <a href="#" class="text-gray-400 hover:text-white transition-colors">
@@ -281,8 +281,7 @@
         </div>
       </div>
       <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
-        <p>本站开源且免费 | 因格机脚本泛滥，运行前请务必检查脚本安全性</p>
-        <p class="mt-1">&copy; 2025 Shell脚本安全检测工具. 保留所有权利.</p>
+        <p class="mt-1">&copy; 2025 @Tobapuw 保留所有权利.</p>
       </div>
     </div>
   </footer>
@@ -312,11 +311,11 @@
     const DANGEROUS_COMMANDS = {
       high: [
         'rm -rf', 'rm -fr', 'dd if=/dev/zero', 'mkfs.', 'shutdown', 'reboot', 'halt', 'poweroff', 
-        'kill -9', 'vim /etc/passwd', 'nano /etc/passwd', 'echo.*>/etc/passwd', 'echo.*>/etc/shadow'
+        'kill -9', 'vim /etc/passwd', 'nano /etc/passwd', 'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'cat * > *'
       ],
       medium: [
         'chmod', 'chown', 'chgrp', 'sudo', 'su -', 'wget', 'curl', 'lynx', 'telnet', 'ftp',
-        '/tmp/', '/var/tmp/', '/dev/shm/'
+        '/tmp/', '/var/tmp/', '/dev/shm/', 'cat * >> *', 'cp'
       ],
       low: [
         'while true', 'sleep 3600', 'sleep 86400', 'mount', 'umount', 'useradd', 'userdel', 
@@ -926,4 +925,3 @@
   </script>
 </body>
 </html>
-    
