@@ -282,22 +282,6 @@ function hasBase58Encoded(content) {
     return false;
 }
 
-// 更严格地检测字符串分割和拼接模式（增加复杂度要求）
-function hasStringConcatenationObfuscation(content) {
-    // 检测类似 "a" + "b" + "c" 的模式（要求至少3个片段）
-    const concatRegex = /['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]/g;
-    // 检测类似 String.fromCharCode(97, 98, 99) 的模式（要求至少5个字符）
-    const charCodeRegex = /String\.fromCharCode\((\d+,){4,}\d+\)/g;
-    
-    return concatRegex.test(content) || charCodeRegex.test(content);
-}
-
-function analyzeShellScript(content) {
-  // 1. 移除所有包含 ui_print、print 或 echo 的行
-  const cleanedContent = content
-    .replace(/^[ \t]*(ui_print|print|echo)[ \t].*$/gm, '') // 移除整行
-    .replace(/(['"])(?:\\.|[^\\])*?\1/g, '""');
-
   // 2. 统计字符频率
   const charFrequency = {};
   for (const char of cleanedContent) {
@@ -393,15 +377,6 @@ function analyzeShellScript(fileName, content) {
             lineContent: content,
             severity: 'medium',
             explanation: '代码中包含字符串拼接模式，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
-        });
-    }
-    if (analyzeCharacterFrequency(content)) {
-        issues.push({
-            line: 0,
-            command: '异常字符频率',
-            lineContent: content,
-            severity: 'medium',
-            explanation: '代码中的字符频率分布异常，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     if (hasExcessiveEscapes(content)) {
