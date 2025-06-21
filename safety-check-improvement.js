@@ -1,38 +1,42 @@
 // 危险命令列表，按风险级别分类
 const DANGEROUS_COMMANDS = {
-  high: [
-    // 文件系统操作
-    'rm -rf(?! /data/adb/\\*)', 'rm -fr(?! /data/adb/\\*)', 'dd if=/dev/zero', 'mkfs.', 
-    'cat(.*>.*|.*>>.*)', // 带重定向的cat命令
-    'cp(.*--remove-destination.*|.*-f.*)', // 强制复制命令
-    'mv(.*--remove-destination.*|.*-f.*)', // 强制移动命令
-    
-    // 系统文件修改
-    'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'echo.*>/etc/fstab',
-    'sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)',
-    'awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)',
-    
-    // 权限提升
-    'su', 'sudo', 'adb root', 'adb remount',
-    
-    // 远程代码执行
-    'wget.*\\|.*(sh|bash|zsh|ksh)', 'curl.*\\|.*(sh|bash|zsh|ksh)',
-    'python.*<.*http', 'perl.*<.*http',
-    
-    // 系统控制
-    ';reboot', ';shutdown', ';halt', ';poweroff', 'killall system_server',
-    
-    // 权限设置
-    'chmod.*(777|775|000|666)', // 高风险权限值
-    'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/', // 系统目录权限剥夺
-    
-    // 无限循环
-    'while true.*\\&', 'for.*;;.*\\&', 'while.*1.*\\&', 'until.*0.*\\&',
-    
-    // 资源耗尽
-    'yes', 'yes.*\\&', 'dd if=/dev/urandom of=/dev/sda',
-    'cat /dev/urandom > /dev/null', 'cat /dev/zero > /dev/null'
-  ],
+high: [
+  // 文件系统操作
+  'rm -rf(?! /data/adb/\\*)', 'rm -fr(?! /data/adb/\\*)', 'dd if=/dev/zero', 'mkfs.', 'tee',
+  'cat(.*>.*|.*>>.*|.*<.*|.*<<.*)', // 带重定向的cat命令
+  'cp(.*--remove-destination.*|.*-f.*)', // 强制复制命令
+  'mv(.*--remove-destination.*|.*-f.*)', // 强制移动命令
+  'find\\s+\\/.*-exec\\s+rm',
+  'find\\s+\\/.*-delete',
+  'cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)', // 切换目录后执行危险命令
+  'echo\\s+.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/', // 写入系统目录
+  
+  // 系统文件修改
+  'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'echo.*>/etc/fstab',
+  'sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)',
+  'awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)',
+  
+  // 权限提升
+  'su', 'sudo', 'adb root', 'adb remount', 'setenforce 0',
+  
+  // 远程代码执行
+  'wget.*\\|.*(sh|bash|zsh|ksh)', 'curl.*\\|.*(sh|bash|zsh|ksh)',
+  'python.*<.*http', 'perl.*<.*http',
+  
+  // 系统控制
+  ';reboot', ';shutdown', ';halt', ';poweroff', 'killall system_server',
+  
+  // 权限设置
+  'chmod.*(777|775|000|666)', // 高风险权限值
+  '\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)', // 系统目录权限剥夺
+  
+  // 无限循环
+  'while true.*\\&', 'for.*;;.*\\&', 'while.*1.*\\&', 'until.*0.*\\&',
+  
+  // 资源耗尽
+  'yes', 'yes.*\\&', 'dd if=/dev/urandom of=/dev/sda',
+  'cat /dev/urandom > /dev/null', 'cat /dev/zero > /dev/null'
+],
   medium: [
     // 文件系统操作
     'chmod(?!.*(77[0-7]|666|000))', 'chown', 'chgrp', 'mount', 'umount',
@@ -52,11 +56,11 @@ const DANGEROUS_COMMANDS = {
     'reboot', 'shutdown', 'halt', 'poweroff', 'reboot recovery', 'reboot bootloader',
     
     // 包管理
-    'pm install', 'pm uninstall', 'am start', 'adb install', 'adb uninstall'
+    'pm uninstall', 'am start', 'adb install', 'adb uninstall'
   ],
   low: [
     // 系统信息
-    'cat(?!.*>.*|.*>>.*)', 'ls', 'df', 'du', 'ps', 'top', 'free', 'uptime',
+    'ls', 'df', 'du', 'ps', 'top', 'free', 'uptime',
     
     // 文件操作
     'cp(?!.*--remove-destination.*|.*-f.*)', 'mv(?!.*--remove-destination.*|.*-f.*)',
@@ -69,7 +73,7 @@ const DANGEROUS_COMMANDS = {
     'date', 'hwclock', 'timedatectl', 'sleep(?! [0-9]{4,})',
     
     // 其他
-    'echo(?!.*>.*|.*>>.*)', 'printf', 'export', 'source', '.', 'alias', 'unalias'
+    'echo(?!.*>.*|.*>>.*)', 'printf', 'export', 'source', 'alias', 'unalias',
   ]
 };
 
