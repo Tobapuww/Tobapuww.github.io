@@ -3,6 +3,10 @@ const DANGEROUS_COMMANDS = {
         // 文件系统操作
         '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
         '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)rm -f(?! /data/adb/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)rm -rf(?! /data/local/tmp/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)rm -fr(?! /data/local/tmp/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)rm -f(?! /data/local/tmp/\\*)\\b',
         '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
         '^(\\s*|.*\\|\\s*)mkfs.\\b',
         '^(\\s*|.*\\|\\s*)tee\\b',
@@ -123,7 +127,6 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)cp(?!.*--remove-destination.*|-f.*)\\b',
         '^(\\s*|.*\\|\\s*)mv(?!.*--remove-destination.*|-f.*)\\b',
         '^(\\s*|.*\\|\\s*)grep\\b',
-        '^(\\s*|.*\\|\\s*)find\\b',
         '^(\\s*|.*\\|\\s*)sort\\b',
         '^(\\s*|.*\\|\\s*)uniq\\b',
         '^(\\s*|.*\\|\\s*)head\\b',
@@ -144,10 +147,8 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)date\\b',
         '^(\\s*|.*\\|\\s*)hwclock\\b',
         '^(\\s*|.*\\|\\s*)timedatectl\\b',
-        '^(\\s*|.*\\|\\s*)sleep(?! [0-9]{4,})\\b',
 
         // 其他
-        '^(\\s*|.*\\|\\s*)printf\\b',
         '^(\\s*|.*\\|\\s*)export\\b',
         '^(\\s*|.*\\|\\s*)source\\b',
         '^(\\s*|.*\\|\\s*)alias\\b',
@@ -162,12 +163,36 @@ const COMMAND_EXPLANATIONS = {
     'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
     'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”',
     'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
-    'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行',
+    'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行、应用闪退',
     'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
     'while true': '无限循环命令，可能导致系统资源耗尽',
     'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
     'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
     'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
+    'tee': '双向重定向命令，可同时修改文件内容和输出内容，可能被用于篡改系统文件',
+    'cp --remove-destination': '强制覆盖目标文件（先删除再复制），可能破坏系统关键文件',
+    'mv --remove-destination': '强制移动文件（先删除目标），可能导致数据丢失',
+    'find -exec rm': '递归查找并删除文件，可能误删系统关键路径',
+    'find -delete': '直接删除匹配文件，绕过安全机制',
+    'cd ../ && rm': '通过上级目录跳转执行删除，规避路径监控',
+    'echo >/etc/fstab': '覆盖文件系统挂载表，导致系统无法启动',
+    'sed -i /etc/hosts': '直接修改DNS解析文件，可能劫持网络流量',
+    'sudo': '临时获取root权限执行命令，高风险操作入口点',
+    'adb remount': '重新挂载系统分区为可写状态，为系统篡改铺路',
+    'setenforce 0': '关闭SELinux安全机制，大幅降低系统防护',
+    'python < http': '直接执行远程代码，极可能触发恶意脚本',
+    ';reboot': '强制重启系统（使用命令分隔符），中断关键服务',
+    'chmod 000 /system': '剥夺系统目录所有权限，导致系统崩溃',
+    'while true &': '后台无限循环，耗尽CPU/内存资源',
+    'dd if=/dev/urandom of=/dev/sda': '用随机数据覆盖磁盘，永久破坏存储设备',
+    // 新增中等风险命令解释
+    'mount': '挂载存储设备或分区，错误操作可能导致系统崩溃',
+    'umount': '卸载已挂载分区，强制卸载可能损坏数据',
+    'ln -s': '创建符号链接，可能被用于劫持系统命令路径',
+    'pm uninstall': '卸载Android应用包，可能破坏系统应用',
+    'adb install': '安装APK文件，可能植入恶意应用',
+    // 新增低风险命令解释
+    'netstat': '显示网络连接状态，可能用于探测敏感端口'
 };
 
 // 安全注释列表
@@ -175,19 +200,31 @@ const SAFETY_COMMENTS = {
     'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
     'reboot': '系统重启命令，在适当场景下是安全的',
     'shutdown -h now': '正常关闭系统，不会造成破坏',
-    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置',
-    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置',
+    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
+    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
     'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
     'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
     'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
     'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
+    'rm -f /data/local/tmp/*': '清理临时缓存文件，常见于调试脚本',
+    'mount -o ro /dev/sda1 /mnt': '以只读模式挂载分区，无数据篡改风险',
+    'umount -l /mnt': '延迟卸载（lazy unmount），安全解除占用',
+    'ln -s /sdcard/legit /data/local': '创建合法路径软链接，正常功能需求',
+    'wget https://example.com/safe.zip': '单纯下载资源（无管道执行），低风险操作',
+    'curl -O https://repo/file.conf': '下载配置文件到当前目录，安全行为',
+    'adb install /sdcard/update.apk': '安装本地可信APK，正常更新操作',
+    'pm uninstall com.spam.app': '卸载用户安装的第三方应用，无系统影响',
+    'mkdir /data/local/tmp/logs': '创建临时日志目录，调试常用操作',
+    'touch /data/local/tmp/.lockfile': '创建临时锁文件，进程控制机制',
+    'chmod 750 /data/local/bin': '设置目录合理权限（所有者可执行），安全授权',
+    'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为'
 };
 
 // 检测代码是否被压缩
 function isCompressedCode(content) {
     const lines = content.split('\n');
     const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
-    return avgLineLength > 100; // 可以根据实际情况调整阈值
+    return avgLineLength > 100; 
 }
 
 // 检测变量名是否被重命名
@@ -200,7 +237,7 @@ function hasRenamedVariables(content) {
     }
     if (variables.length === 0) return false;
     const avgLength = variables.reduce((sum, varName) => sum + varName.length, 0) / variables.length;
-    return avgLength < 3; // 可以根据实际情况调整阈值
+    return avgLength < 3; 
 }
 
 // 检测Base64编码
@@ -226,12 +263,49 @@ function hasBase58Encoded(content) {
     const words = content.split(/\s+/);
     for (const word of words) {
         if (base58Regex.test(word)) {
-            // 这里只是简单检测，实际解码需要使用Base58库
             return true;
         }
     }
     return false;
 }
+
+// 检测字符串分割和拼接模式
+function hasStringConcatenationObfuscation(content) {
+    // 检测类似 "a" + "b" + "c" 的模式
+    const concatRegex = /['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]/g;
+    // 检测类似 String.fromCharCode(97, 98, 99) 的模式
+    const charCodeRegex = /String\.fromCharCode\((\d+,)+\d+\)/g;
+    
+    return concatRegex.test(content) || charCodeRegex.test(content);
+}
+// 分析字符频率
+function analyzeCharacterFrequency(content) {
+    const charMap = {};
+    for (const char of content) {
+        charMap[char] = (charMap[char] || 0) + 1;
+    }
+    
+    // 计算ASCII字符与非ASCII字符的比例
+    const asciiChars = Object.keys(charMap).filter(char => char.charCodeAt(0) < 128).length;
+    const nonAsciiChars = Object.keys(charMap).length - asciiChars;
+    
+    // 如果非ASCII字符比例过高，可能是混淆代码
+    return nonAsciiChars / (asciiChars + nonAsciiChars) > 0.2;
+}
+// 检测异常转义序列
+function hasExcessiveEscapes(content) {
+    // 检测\xXX形式的转义
+    const hexEscapeRegex = /\\x[0-9A-Fa-f]{2}/g;
+    // 检测\uXXXX形式的转义
+    const unicodeEscapeRegex = /\\u[0-9A-Fa-f]{4}/g;
+    
+    const hexEscapes = content.match(hexEscapeRegex) || [];
+    const unicodeEscapes = content.match(unicodeEscapeRegex) || [];
+    
+    // 如果转义序列数量超过阈值，可能是混淆代码
+    return hexEscapes.length + unicodeEscapes.length > 10;
+}
+
 
 // 改进的分析函数
 function analyzeShellScript(fileName, content) {
@@ -263,7 +337,7 @@ function analyzeShellScript(fileName, content) {
             command: '代码压缩',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码可能被压缩，增加了代码的可读性难度，⚠️我们强烈不建议你执行该脚本！'
+            explanation: '代码可能被压缩，增加了代码的可读性难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     if (hasRenamedVariables(content)) {
@@ -272,7 +346,36 @@ function analyzeShellScript(fileName, content) {
             command: '变量重命名',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
+            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+        });
+    }
+    
+    // 字符替换混淆检测
+    if (hasStringConcatenationObfuscation(content)) {
+        issues.push({
+            line: 0,
+            command: '字符串拼接混淆',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中包含字符串拼接模式，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+        });
+    }
+    if (analyzeCharacterFrequency(content)) {
+        issues.push({
+            line: 0,
+            command: '异常字符频率',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中的字符频率分布异常，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+        });
+    }
+    if (hasExcessiveEscapes(content)) {
+        issues.push({
+            line: 0,
+            command: '过多转义序列',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中包含过多转义序列，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
 
@@ -283,7 +386,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base64编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
+            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     if (hasBase58Encoded(content)) {
@@ -292,7 +395,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base58编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
+            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
 
@@ -310,7 +413,7 @@ function analyzeShellScript(fileName, content) {
                     command: command.replace(/\\\*|\(\?!.*\)/g, ''),
                     lineContent: line,
                     severity: 'high',
-                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，可能导致系统损坏或数据丢失'
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，极易可能导致系统损坏或数据丢失'
                 });
             }
         });
@@ -324,7 +427,7 @@ function analyzeShellScript(fileName, content) {
                     command: command.replace(/\\\*|\(\?!.*\)/g, ''),
                     lineContent: line,
                     severity: 'medium',
-                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，可能影响系统配置或安全'
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，有一定风险影响系统配置或安全'
                 });
             }
         });
@@ -338,7 +441,7 @@ function analyzeShellScript(fileName, content) {
                     command: command.replace(/\\\*|\(\?!.*\)/g, ''),
                     lineContent: line,
                     severity: 'low',
-                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，可能影响系统性能或资源使用'
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，不至于损坏设备，但可能会影响系统正常运行'
                 });
             }
         });
@@ -378,7 +481,7 @@ function showFileDetails(result) {
                         <i class="fa fa-check text-success text-2xl"></i>
                     </div>
                     <h4 class="font-semibold text-gray-800">文件安全</h4>
-                    <p class="text-gray-500 mt-2">未检测到任何危险命令</p>
+                    <p class="text-gray-500 mt-2">未检测到任何风险命令</p>
                 </div>
             `;
         } else {
@@ -405,7 +508,7 @@ function showFileDetails(result) {
                         </div>
                         <div class="p-4">
                             <p class="text-sm text-gray-700 mb-2">
-                                包含危险命令: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">${issue.command}</code>
+                                包含风险命令: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">${issue.command}</code>
                             </p>
                             <p class="text-xs text-gray-500 mb-3">
                                 <i class="fa fa-info-circle mr-1"></i>
@@ -420,7 +523,7 @@ function showFileDetails(result) {
 
             modalContent.innerHTML = `
                 <div class="mb-6">
-                    <h5 class="font-semibold text-gray-800 mb-3">检测到的问题</h5>
+                    <h5 class="font-semibold text-gray-800 mb-3">检测到以下问题</h5>
                     ${issuesHTML}
                 </div>
                 <div>
