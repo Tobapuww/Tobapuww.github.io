@@ -238,7 +238,6 @@ function hasRenamedVariables(content) {
     }
     if (variables.length < 10) return false; // 变量太少不做判断
     const avgLength = variables.reduce((sum, varName) => sum + varName.length, 0) / variables.length;
-    const shortVars = variables.filter(var => var.length <= 2).length;
     // 要求平均长度小于2.5且短变量占比超过50%
     return avgLength < 2.5 && shortVars / variables.length > 0.5;
 }
