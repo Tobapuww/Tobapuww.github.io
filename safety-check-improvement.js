@@ -241,14 +241,18 @@ function hasRenamedVariables(content) {
     // 要求平均长度小于2.5且短变量占比超过50%
     return avgLength < 2.5 && shortVars / variables.length > 0.5;
 }
-
-// 更严格地检测Base64编码（排除短字符串和常见单词）
 function hasBase64Encoded(content) {
     const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
     const words = content.split(/\s+/);
+    
+    // 定义常见单词列表（简化版）
+    const commonWords = ['the', 'and', 'for', 'this', 'that', 'with', 'have', 'are', 'not'];
+    const isCommonWord = word => commonWords.includes(word.toLowerCase());
+    
     for (const word of words) {
-        // 排除短字符串和常见单词
+        // 排除短字符串和常见单词 - 修复括号问题
         if (word.length < 20 || isCommonWord(word)) continue;
+        
         if (base64Regex.test(word)) {
             try {
                 const decoded = atob(word);
@@ -261,7 +265,6 @@ function hasBase64Encoded(content) {
     }
     return false;
 }
-
 // 辅助函数：判断是否为常见单词
 function isCommonWord(word) {
     const commonWords = ['the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but'];
