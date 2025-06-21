@@ -1,8 +1,6 @@
 const DANGEROUS_COMMANDS = {
   high: [
     // 文件系统操作
-    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
-    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
     '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
     '^(\\s*|.*\\|\\s*)mkfs.\\b',
     '^(\\s*|.*\\|\\s*)tee\\b',
@@ -130,10 +128,10 @@ const DANGEROUS_COMMANDS = {
     '^(\\s*|.*\\|\\s*)tail\\b',
     '^(\\s*|.*\\|\\s*)less\\b',
     '^(\\s*|.*\\|\\s*)more\\b',
+    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
+    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
     
     // 网络命令
-    '^(\\s*|.*\\|\\s*)ping\\b',
-    '^(\\s*|.*\\|\\s*)ping6\\b',
     '^(\\s*|.*\\|\\s*)traceroute\\b',
     '^(\\s*|.*\\|\\s*)tracepath\\b',
     '^(\\s*|.*\\|\\s*)netstat\\b',
