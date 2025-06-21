@@ -344,3 +344,35 @@ function showFileDetails(result) {
   
   modal.classList.remove('hidden');
 }    
+
+if (typeof closeModal !== 'function') {
+  function closeModal() {
+    const modal = document.getElementById('modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+}
+
+// 绑定关闭按钮事件，防止因重复加载脚本或作用域污染导致未绑定
+window.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('modal');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+  const closeModalIcon = document.getElementById('close-modal');
+
+  if (closeModalBtn) {
+    closeModalBtn.onclick = closeModal;
+  }
+
+  if (closeModalIcon) {
+    closeModalIcon.onclick = closeModal;
+  }
+
+  if (modal) {
+    modal.onclick = function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    };
+  }
+});
