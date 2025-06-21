@@ -205,53 +205,82 @@ function analyzeShellScript(fileName, content) {
     };
   }
   
-  // 检查每一行是否包含危险命令
-  lines.forEach((line, lineNumber) => {
-    // 跳过空行和注释
-    if (!line.trim() || line.trim().startsWith('#')) return;
-    
-    // 检查高风险命令
-    DANGEROUS_COMMANDS.high.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'high',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，可能导致系统损坏或数据丢失'
-        });
-      }
-    });
-    
-    // 检查中风险命令
-    DANGEROUS_COMMANDS.medium.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'medium',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，可能影响系统配置或安全'
-        });
-      }
-    });
-    
-    // 检查低风险命令
-    DANGEROUS_COMMANDS.low.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'low',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，可能影响系统性能或资源使用'
-        });
-      }
-    });
+// 危险命令列表，按风险级别分类
+const DANGEROUS_COMMANDS = {
+  high: [
+    {
+      regex: /^(?:\s*|.*\|\\s*)rm -rf(?! /data/adb/\*)\b/,
+      display: 'rm -rf',
+      explanation: '递归删除文件和目录，可能导致不可恢复的数据丢失'
+    },
+    {
+      regex: /^(?:\s*|.*\|\\s*)dd if=\/dev\/zero\b/,
+      display: 'dd if=/dev/zero',
+      explanation: '低级磁盘操作命令，可能覆盖重要数据'
+    },
+    // 其他高风险命令...
+  ],
+  medium: [
+    {
+      regex: /^(?:\s*|.*\|\\s*)chmod(?!.*(77[0-7]|666|000))\b/,
+      display: 'chmod',
+      explanation: '修改文件权限命令，不当使用可能导致安全漏洞'
+    },
+    // 其他中风险命令...
+  ],
+  low: [
+    {
+      regex: /^(?:\s*|.*\|\\s*)ls\b/,
+      display: 'ls',
+      explanation: '列出目录内容，低风险操作'
+    },
+    // 其他低风险命令...
+  ]
+};
+
+// 检查每一行是否包含危险命令
+lines.forEach((line, lineNumber) => {
+  // 跳过空行和注释
+  if (!line.trim() || line.trim().startsWith('#')) return;
+  
+  // 检查高风险命令
+  DANGEROUS_COMMANDS.high.forEach(item => {
+    if (item.regex.test(line)) {
+      issues.push({
+        line: lineNumber + 1,
+        command: item.display,
+        lineContent: line,
+        severity: 'high',
+        explanation: item.explanation
+      });
+    }
   });
+  
+  // 类似地处理中风险和低风险命令
+  DANGEROUS_COMMANDS.medium.forEach(item => {
+    if (item.regex.test(line)) {
+      issues.push({
+        line: lineNumber + 1,
+        command: item.display,
+        lineContent: line,
+        severity: 'medium',
+        explanation: item.explanation
+      });
+    }
+  });
+  
+  DANGEROUS_COMMANDS.low.forEach(item => {
+    if (item.regex.test(line)) {
+      issues.push({
+        line: lineNumber + 1,
+        command: item.display,
+        lineContent: line,
+        severity: 'low',
+        explanation: item.explanation
+      });
+    }
+  });
+});
   
   return {
     fileName,
