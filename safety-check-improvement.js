@@ -154,7 +154,7 @@ const DANGEROUS_COMMANDS = {
   ]
 };
 
-// 命令详细解释
+// 命令详细解释 - 修复了语法错误（添加了缺失的逗号）
 const COMMAND_EXPLANATIONS = {
   'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
   'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
@@ -166,8 +166,8 @@ const COMMAND_EXPLANATIONS = {
   'while true': '无限循环命令，可能导致系统资源耗尽',
   'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
   'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
-  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
-  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有“>”,">>","tee"字样的命令。</span>',
+  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启', // 添加了缺失的逗号
+  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有“>”,">>","tee"字样的命令。</span>'
 };
 
 // 安全注释列表
@@ -182,7 +182,8 @@ const SAFETY_COMMENTS = {
   'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险'
 };
 
-// 改进的分析函数
+
+// 改进的分析函数 - 移除了函数内部的重复定义
 function analyzeShellScript(fileName, content) {
   const issues = [];
   
@@ -204,39 +205,58 @@ function analyzeShellScript(fileName, content) {
       content
     };
   }
+ 
+// 检查每一行是否包含危险命令
+  lines.forEach((line, lineNumber) => {
+    // 跳过空行和注释
+    if (!line.trim() || line.trim().startsWith('#')) return;
+    
+    // 检查高风险命令
+    DANGEROUS_COMMANDS.high.forEach(item => {
+      if (item.regex.test(line)) {
+        issues.push({
+          line: lineNumber + 1,
+          command: item.display,
+          lineContent: line,
+          severity: 'high',
+          explanation: item.explanation
+        });
+      }
+    });
+    
+    // 类似地处理中风险和低风险命令
+    DANGEROUS_COMMANDS.medium.forEach(item => {
+      if (item.regex.test(line)) {
+        issues.push({
+          line: lineNumber + 1,
+          command: item.display,
+          lineContent: line,
+          severity: 'medium',
+          explanation: item.explanation
+        });
+      }
+    });
+    
+    DANGEROUS_COMMANDS.low.forEach(item => {
+      if (item.regex.test(line)) {
+        issues.push({
+          line: lineNumber + 1,
+          command: item.display,
+          lineContent: line,
+          severity: 'low',
+          explanation: item.explanation
+        });
+      }
+    });
+  });
   
-// 危险命令列表，按风险级别分类
-const DANGEROUS_COMMANDS = {
-  high: [
-    {
-      regex: /^(?:\s*|.*\|\\s*)rm -rf(?! /data/adb/\*)\b/,
-      display: 'rm -rf',
-      explanation: '递归删除文件和目录，可能导致不可恢复的数据丢失'
-    },
-    {
-      regex: /^(?:\s*|.*\|\\s*)dd if=\/dev\/zero\b/,
-      display: 'dd if=/dev/zero',
-      explanation: '低级磁盘操作命令，可能覆盖重要数据'
-    },
-    // 其他高风险命令...
-  ],
-  medium: [
-    {
-      regex: /^(?:\s*|.*\|\\s*)chmod(?!.*(77[0-7]|666|000))\b/,
-      display: 'chmod',
-      explanation: '修改文件权限命令，不当使用可能导致安全漏洞'
-    },
-    // 其他中风险命令...
-  ],
-  low: [
-    {
-      regex: /^(?:\s*|.*\|\\s*)ls\b/,
-      display: 'ls',
-      explanation: '列出目录内容，低风险操作'
-    },
-    // 其他低风险命令...
-  ]
-};
+  return {
+    fileName,
+    encrypted: false,
+    issues,
+    content
+  };
+}
 
 // 检查每一行是否包含危险命令
 lines.forEach((line, lineNumber) => {
