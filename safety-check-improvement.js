@@ -37,7 +37,10 @@ const COMMAND_EXPLANATIONS = {
   'curl': '数据传输命令，可能被用于执行远程代码',
   'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
   'while true': '无限循环命令，可能导致系统资源耗尽',
-  '/tmp/': '临时目录，常被用于存放临时文件，可能存在安全风险'
+  '/tmp/': '临时目录，常被用于存放临时文件，可能存在安全风险',
+  'cp': '复制文件到某处，可能将系统文件强行覆盖或植入病毒，可能存在安全风险',
+  'cat': '查看、创建文件或覆盖写入某文件 尤其格外注意命令中带有“>>”或“>”，可能存在安全风险',
+  'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容'
 };
 
 // 安全注释列表
@@ -139,7 +142,7 @@ function showFileDetails(result) {
           <i class="fa fa-lock text-warning text-2xl"></i>
         </div>
         <h4 class="font-semibold text-gray-800">加密脚本</h4>
-        <p class="text-gray-500 mt-2">此脚本已加密，无法分析其内容</p>
+        <p class="text-gray-500 mt-2">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
       </div>
     `;
   } else if (result.error) {
