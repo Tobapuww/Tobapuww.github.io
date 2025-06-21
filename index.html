@@ -628,7 +628,7 @@
                 </div>
                 <div class="flex-grow">
                   <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
-                  <p class="text-warning text-sm mt-1">此脚本已加密，无法分析其内容</p>
+                  <p class="text-warning text-sm mt-1">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
                 </div>
               </div>
             </div>
@@ -700,7 +700,7 @@
         if (result.error) {
           reportContent += `  错误: ${result.error}\n\n`;
         } else if (result.encrypted) {
-          reportContent += `  状态: 加密脚本\n  此脚本已加密，无法分析其内容\n\n`;
+          reportContent += `  状态: 加密脚本\n  此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！\n\n`;
         } else {
           if (result.issues.length === 0) {
             reportContent += `  状态: 安全\n  未检测到任何危险命令\n\n`;
