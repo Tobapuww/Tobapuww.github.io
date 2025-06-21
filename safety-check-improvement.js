@@ -1,26 +1,75 @@
 // 危险命令列表，按风险级别分类
 const DANGEROUS_COMMANDS = {
   high: [
+    // 文件系统操作
     'rm -rf(?! /data/adb/\\*)', 'rm -fr(?! /data/adb/\\*)', 'dd if=/dev/zero', 'mkfs.', 
-    'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'cat * > *',
-    'wget.*\\|.*bash', 'curl.*\\|.*bash', // 远程下载并执行
-    'chmod.*777', 'chmod.*775', // 过度权限设置
-    'sed.*-i.*\\/etc\\/passwd', 'sed.*-i.*\\/etc\\/shadow', // 直接修改系统文件
-    ';reboot', ';shutdown', ';halt', ';poweroff', // 作为命令链的一部分
-    'while true.*\\&', 'for.*;;.*\\&' // 后台无限循环
+    'cat(.*>.*|.*>>.*)', // 带重定向的cat命令
+    'cp(.*--remove-destination.*|.*-f.*)', // 强制复制命令
+    'mv(.*--remove-destination.*|.*-f.*)', // 强制移动命令
+    
+    // 系统文件修改
+    'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'echo.*>/etc/fstab',
+    'sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)',
+    'awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)',
+    
+    // 权限提升
+    'su', 'sudo', 'adb root', 'adb remount',
+    
+    // 远程代码执行
+    'wget.*\\|.*(sh|bash|zsh|ksh)', 'curl.*\\|.*(sh|bash|zsh|ksh)',
+    'python.*<.*http', 'perl.*<.*http',
+    
+    // 系统控制
+    ';reboot', ';shutdown', ';halt', ';poweroff', 'killall system_server',
+    
+    // 权限设置
+    'chmod.*(777|775|000|666)', // 高风险权限值
+    'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/', // 系统目录权限剥夺
+    
+    // 无限循环
+    'while true.*\\&', 'for.*;;.*\\&', 'while.*1.*\\&', 'until.*0.*\\&',
+    
+    // 资源耗尽
+    'yes', 'yes.*\\&', 'dd if=/dev/urandom of=/dev/sda',
+    'cat /dev/urandom > /dev/null', 'cat /dev/zero > /dev/null'
   ],
   medium: [
-    'chmod(?!.*77[0-7])', 'chown', 'chgrp', 'sudo', 'su -',
-    'mount', 'umount', 'useradd', 'userdel', 'groupadd', 'groupdel', 'passwd',
-    '/tmp/', '/var/tmp/', '/dev/shm/', 'cat * >> *', 'cp'
+    // 文件系统操作
+    'chmod(?!.*(77[0-7]|666|000))', 'chown', 'chgrp', 'mount', 'umount',
+    'ln -s', 'touch', 'mkdir', 'rmdir', 'rm(?! -rf| -fr)',
+    
+    // 用户管理
+    'useradd', 'userdel', 'groupadd', 'groupdel', 'passwd', 'usermod',
+    
+    // 临时目录操作
+    '.*\\/tmp\\/.*', '.*\\/var\\/tmp\\/.*', '.*\\/dev\\/shm\\/.*',
+    
+    // 网络命令
+    'wget(?!.*\\|.*(sh|bash|zsh|ksh))', 'curl(?!.*\\|.*(sh|bash|zsh|ksh))',
+    'telnet', 'ftp', 'nc', 'ncat', 'ssh', 'scp', 'rsync',
+    
+    // 系统控制
+    'reboot', 'shutdown', 'halt', 'poweroff', 'reboot recovery', 'reboot bootloader',
+    
+    // 包管理
+    'pm install', 'pm uninstall', 'am start', 'adb install', 'adb uninstall'
   ],
   low: [
-    'reboot', 'shutdown', 'halt', 'poweroff', // 系统控制命令
-    'wget', 'curl', 'lynx', 'telnet', 'ftp', // 网络命令
-    'sleep 3600', 'sleep 86400', // 长时间休眠
-    'while true', 'for.*;;', // 无限循环
-    'rm -rf /data/adb/*', // Magisk模块清理
-    'chmod.*666' // 宽松但常见的权限设置
+    // 系统信息
+    'cat(?!.*>.*|.*>>.*)', 'ls', 'df', 'du', 'ps', 'top', 'free', 'uptime',
+    
+    // 文件操作
+    'cp(?!.*--remove-destination.*|.*-f.*)', 'mv(?!.*--remove-destination.*|.*-f.*)',
+    'grep', 'find', 'sort', 'uniq', 'head', 'tail', 'less', 'more',
+    
+    // 网络命令
+    'ping', 'ping6', 'traceroute', 'tracepath', 'netstat', 'ifconfig', 'ip',
+    
+    // 时间管理
+    'date', 'hwclock', 'timedatectl', 'sleep(?! [0-9]{4,})',
+    
+    // 其他
+    'echo(?!.*>.*|.*>>.*)', 'printf', 'export', 'source', '.', 'alias', 'unalias'
   ]
 };
 
@@ -29,18 +78,14 @@ const COMMAND_EXPLANATIONS = {
   'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
   'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
   'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
-  'reboot': '重启系统命令，可能导致服务中断',
-  'shutdown': '关闭系统命令，可能导致服务中断',
-  'chmod': '修改文件权限命令，不当使用可能导致安全漏洞',
-  'chmod.*777': '赋予文件所有人读、写、执行权限，存在安全风险',
-  'wget': '从网络下载文件的命令，可能下载恶意代码',
-  'curl': '数据传输命令，可能被用于执行远程代码',
+  'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”',
+  'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
+  'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行',
   'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
   'while true': '无限循环命令，可能导致系统资源耗尽',
-  '/tmp/': '临时目录，常被用于存放临时文件，可能存在安全风险',
-  'cp': '复制文件到某处，可能将系统文件强行覆盖或植入病毒，可能存在安全风险',
-  'cat': '查看、创建文件或覆盖写入某文件 尤其格外注意命令中带有“>>”或“>”，可能存在安全风险',
-  'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容'
+  'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
+  'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
+  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
 };
 
 // 安全注释列表
@@ -49,7 +94,11 @@ const SAFETY_COMMENTS = {
   'reboot': '系统重启命令，在适当场景下是安全的',
   'shutdown -h now': '正常关闭系统，不会造成破坏',
   'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置',
-  'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置'
+  'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置',
+  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作',
+  'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作',
+  'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险',
+  'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险'
 };
 
 // 改进的分析函数
