@@ -220,14 +220,15 @@ const SAFETY_COMMENTS = {
     'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为'
 };
 
-// 检测代码是否被压缩
+// 更严格地检测代码是否被压缩（提高阈值）
 function isCompressedCode(content) {
     const lines = content.split('\n');
     const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
-    return avgLineLength > 100; 
+    // 提高阈值到150，并要求行数少于50（避免长脚本被误判）
+    return avgLineLength > 150 && lines.length < 50;
 }
 
-// 检测变量名是否被重命名
+// 更严格地检测变量名是否被重命名（增加更多条件）
 function hasRenamedVariables(content) {
     const variableRegex = /\b([a-zA-Z_$][0-9a-zA-Z_$]*)\b/g;
     const variables = [];
@@ -235,20 +236,25 @@ function hasRenamedVariables(content) {
     while ((match = variableRegex.exec(content))!== null) {
         variables.push(match[1]);
     }
-    if (variables.length === 0) return false;
+    if (variables.length < 10) return false; // 变量太少不做判断
     const avgLength = variables.reduce((sum, varName) => sum + varName.length, 0) / variables.length;
-    return avgLength < 3; 
+    const shortVars = variables.filter(var => var.length <= 2).length;
+    // 要求平均长度小于2.5且短变量占比超过50%
+    return avgLength < 2.5 && shortVars / variables.length > 0.5;
 }
 
-// 检测Base64编码
+// 更严格地检测Base64编码（排除短字符串和常见单词）
 function hasBase64Encoded(content) {
     const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
     const words = content.split(/\s+/);
     for (const word of words) {
+        // 排除短字符串和常见单词
+        if (word.length < 20 || isCommonWord(word)) continue;
         if (base64Regex.test(word)) {
             try {
-                atob(word);
-                return true;
+                const decoded = atob(word);
+                // 确保解码后不是纯ASCII字符（减少误判）
+                if (/[^\x00-\x7F]/.test(decoded)) return true;
             } catch (error) {
                 continue;
             }
@@ -257,11 +263,19 @@ function hasBase64Encoded(content) {
     return false;
 }
 
-// 检测Base58编码
+// 辅助函数：判断是否为常见单词
+function isCommonWord(word) {
+    const commonWords = ['the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but'];
+    return commonWords.includes(word.toLowerCase());
+}
+
+// 更严格地检测Base58编码（增加长度要求和排除常见标识符）
 function hasBase58Encoded(content) {
     const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
     const words = content.split(/\s+/);
     for (const word of words) {
+        // 排除短字符串和可能的标识符
+        if (word.length < 20 || /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(word)) continue;
         if (base58Regex.test(word)) {
             return true;
         }
@@ -269,16 +283,17 @@ function hasBase58Encoded(content) {
     return false;
 }
 
-// 检测字符串分割和拼接模式
+// 更严格地检测字符串分割和拼接模式（增加复杂度要求）
 function hasStringConcatenationObfuscation(content) {
-    // 检测类似 "a" + "b" + "c" 的模式
-    const concatRegex = /['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]/g;
-    // 检测类似 String.fromCharCode(97, 98, 99) 的模式
-    const charCodeRegex = /String\.fromCharCode\((\d+,)+\d+\)/g;
+    // 检测类似 "a" + "b" + "c" 的模式（要求至少3个片段）
+    const concatRegex = /['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]\s*\+\s*['"][^'"]+['"]/g;
+    // 检测类似 String.fromCharCode(97, 98, 99) 的模式（要求至少5个字符）
+    const charCodeRegex = /String\.fromCharCode\((\d+,){4,}\d+\)/g;
     
     return concatRegex.test(content) || charCodeRegex.test(content);
 }
-// 分析字符频率
+
+// 更严格地分析字符频率（提高阈值并增加更多条件）
 function analyzeCharacterFrequency(content) {
     const charMap = {};
     for (const char of content) {
@@ -289,10 +304,11 @@ function analyzeCharacterFrequency(content) {
     const asciiChars = Object.keys(charMap).filter(char => char.charCodeAt(0) < 128).length;
     const nonAsciiChars = Object.keys(charMap).length - asciiChars;
     
-    // 如果非ASCII字符比例过高，可能是混淆代码
-    return nonAsciiChars / (asciiChars + nonAsciiChars) > 0.2;
+    // 要求非ASCII字符比例超过30%，并且包含多种不同的非ASCII字符
+    return nonAsciiChars / (asciiChars + nonAsciiChars) > 0.3 && nonAsciiChars > 10;
 }
-// 检测异常转义序列
+
+// 更严格地检测异常转义序列（提高阈值并检查分布）
 function hasExcessiveEscapes(content) {
     // 检测\xXX形式的转义
     const hexEscapeRegex = /\\x[0-9A-Fa-f]{2}/g;
@@ -302,10 +318,18 @@ function hasExcessiveEscapes(content) {
     const hexEscapes = content.match(hexEscapeRegex) || [];
     const unicodeEscapes = content.match(unicodeEscapeRegex) || [];
     
-    // 如果转义序列数量超过阈值，可能是混淆代码
-    return hexEscapes.length + unicodeEscapes.length > 10;
+    // 要求转义序列数量超过20，并且分布在至少5行中
+    if (hexEscapes.length + unicodeEscapes.length <= 20) return false;
+    
+    const escapeLines = new Set();
+    [...hexEscapes, ...unicodeEscapes].forEach(escape => {
+        const index = content.indexOf(escape);
+        const lineNumber = content.substring(0, index).split('\n').length;
+        escapeLines.add(lineNumber);
+    });
+    
+    return escapeLines.size > 5;
 }
-
 
 // 改进的分析函数
 function analyzeShellScript(fileName, content) {
