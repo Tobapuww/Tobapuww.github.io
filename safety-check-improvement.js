@@ -168,7 +168,7 @@ const COMMAND_EXPLANATIONS = {
     'while true': '无限循环命令，可能导致系统资源耗尽',
     'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
     'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
-    'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
+    'killall system_server': '终止Android系统核心服务，导致系统崩溃重启',
     'tee': '双向重定向命令，可同时修改文件内容和输出内容，可能被用于篡改系统文件',
     'cp --remove-destination': '强制覆盖目标文件（先删除再复制），可能破坏系统关键文件',
     'mv --remove-destination': '强制移动文件（先删除目标），可能导致数据丢失',
