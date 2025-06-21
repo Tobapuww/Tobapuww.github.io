@@ -1,377 +1,467 @@
 const DANGEROUS_COMMANDS = {
-  high: [
-    // 文件系统操作
-    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
-    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
-    '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
-    '^(\\s*|.*\\|\\s*)mkfs.\\b',
-    '^(\\s*|.*\\|\\s*)tee\\b',
-    '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*)',
-    '^(\\s*|.*\\|\\s*)cp\\b.*(--remove-destination.*|-f.*)',
-    '^(\\s*|.*\\|\\s*)mv\\b.*(--remove-destination.*|-f.*)',
-    '^(\\s*|.*\\|\\s*)find\\s+\\/.*-exec\\s+rm\\b',
-    '^(\\s*|.*\\|\\s*)find\\s+\\/.*-delete\\b',
-    '^(\\s*|.*\\|\\s*)cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)\\b',
-    '^(\\s*|.*\\|\\s*)echo\\b.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/',
-    
-    // 系统文件修改
-    '^(\\s*|.*\\|\\s*)echo.*>/etc/passwd\\b',
-    '^(\\s*|.*\\|\\s*)echo.*>/etc/shadow\\b',
-    '^(\\s*|.*\\|\\s*)echo.*>/etc/fstab\\b',
-    '^(\\s*|.*\\|\\s*)sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
-    '^(\\s*|.*\\|\\s*)awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
-    
-    // 权限提升
-    '^(\\s*|.*\\|\\s*)su\\b',
-    '^(\\s*|.*\\|\\s*)sudo\\b',
-    '^(\\s*|.*\\|\\s*)adb root\\b',
-    '^(\\s*|.*\\|\\s*)adb remount\\b',
-    '^(\\s*|.*\\|\\s*)setenforce 0\\b',
-    
-    // 远程代码执行
-    '^(\\s*|.*\\|\\s*)wget.*\\|.*(sh|bash|zsh|ksh)\\b',
-    '^(\\s*|.*\\|\\s*)curl.*\\|.*(sh|bash|zsh|ksh)\\b',
-    '^(\\s*|.*\\|\\s*)python.*<.*http\\b',
-    '^(\\s*|.*\\|\\s*)perl.*<.*http\\b',
-    
-    // 系统控制
-    '^(\\s*|.*\\|\\s*);reboot\\b',
-    '^(\\s*|.*\\|\\s*);shutdown\\b',
-    '^(\\s*|.*\\|\\s*);halt\\b',
-    '^(\\s*|.*\\|\\s*);poweroff\\b',
-    '^(\\s*|.*\\|\\s*)killall system_server\\b',
-    
-    // 权限设置
-    '^(\\s*|.*\\|\\s*)chmod\\b.*(777|775|000|666)\\b',
-    '^(\\s*|.*\\|\\s*)\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)',
-    
-    // 无限循环
-    '^(\\s*|.*\\|\\s*)while true.*\\&\\b',
-    '^(\\s*|.*\\|\\s*)for.*;;.*\\&\\b',
-    '^(\\s*|.*\\|\\s*)while.*1.*\\&\\b',
-    '^(\\s*|.*\\|\\s*)until.*0.*\\&\\b',
-    
-    // 资源耗尽
-    '^(\\s*|.*\\|\\s*)yes\\b',
-    '^(\\s*|.*\\|\\s*)yes.*\\&\\b',
-    '^(\\s*|.*\\|\\s*)dd if=/dev/urandom of=/dev/sda\\b',
-    '^(\\s*|.*\\|\\s*)cat /dev/urandom > /dev/null\\b',
-    '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b'
-  ],
-  medium: [
-    // 文件系统操作
-    '^(\\s*|.*\\|\\s*)chmod(?!.*(77[0-7]|666|000))\\b',
-    '^(\\s*|.*\\|\\s*)chown\\b',
-    '^(\\s*|.*\\|\\s*)chgrp\\b',
-    '^(\\s*|.*\\|\\s*)mount\\b',
-    '^(\\s*|.*\\|\\s*)umount\\b',
-    '^(\\s*|.*\\|\\s*)ln -s\\b',
-    '^(\\s*|.*\\|\\s*)touch\\b',
-    '^(\\s*|.*\\|\\s*)mkdir\\b',
-    '^(\\s*|.*\\|\\s*)rmdir\\b',
-    '^(\\s*|.*\\|\\s*)rm(?! -rf| -fr)\\b',
-    
-    // 用户管理
-    '^(\\s*|.*\\|\\s*)useradd\\b',
-    '^(\\s*|.*\\|\\s*)userdel\\b',
-    '^(\\s*|.*\\|\\s*)groupadd\\b',
-    '^(\\s*|.*\\|\\s*)groupdel\\b',
-    '^(\\s*|.*\\|\\s*)passwd\\b',
-    '^(\\s*|.*\\|\\s*)usermod\\b',
-    
-    // 临时目录操作
-    '^(\\s*|.*\\|\\s*).*\\/tmp\\/.*\\b',
-    '^(\\s*|.*\\|\\s*).*\\/var\\/tmp\\/.*\\b',
-    '^(\\s*|.*\\|\\s*).*\\/dev\\/shm\\/.*\\b',
-    
-    // 网络命令
-    '^(\\s*|.*\\|\\s*)wget(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
-    '^(\\s*|.*\\|\\s*)curl(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
-    '^(\\s*|.*\\|\\s*)telnet\\b',
-    '^(\\s*|.*\\|\\s*)ftp\\b',
-    '^(\\s*|.*\\|\\s*)nc\\b',
-    '^(\\s*|.*\\|\\s*)ncat\\b',
-    '^(\\s*|.*\\|\\s*)ssh\\b',
-    '^(\\s*|.*\\|\\s*)scp\\b',
-    '^(\\s*|.*\\|\\s*)rsync\\b',
-    
-    // 系统控制
-    '^(\\s*|.*\\|\\s*)reboot\\b',
-    '^(\\s*|.*\\|\\s*)shutdown\\b',
-    '^(\\s*|.*\\|\\s*)halt\\b',
-    '^(\\s*|.*\\|\\s*)poweroff\\b',
-    '^(\\s*|.*\\|\\s*)reboot recovery\\b',
-    '^(\\s*|.*\\|\\s*)reboot bootloader\\b',
-    
-    // 包管理
-    '^(\\s*|.*\\|\\s*)pm uninstall\\b',
-    '^(\\s*|.*\\|\\s*)am start\\b',
-    '^(\\s*|.*\\|\\s*)adb install\\b',
-    '^(\\s*|.*\\|\\s*)adb uninstall\\b'
-  ],
-  low: [
-    // 系统信息
-    '^(\\s*|.*\\|\\s*)ls\\b',
-    '^(\\s*|.*\\|\\s*)df\\b',
-    '^(\\s*|.*\\|\\s*)du\\b',
-    '^(\\s*|.*\\|\\s*)ps\\b',
-    '^(\\s*|.*\\|\\s*)top\\b',
-    '^(\\s*|.*\\|\\s*)free\\b',
-    '^(\\s*|.*\\|\\s*)uptime\\b',
-    
-    // 文件操作
-    '^(\\s*|.*\\|\\s*)cp(?!.*--remove-destination.*|-f.*)\\b',
-    '^(\\s*|.*\\|\\s*)mv(?!.*--remove-destination.*|-f.*)\\b',
-    '^(\\s*|.*\\|\\s*)grep\\b',
-    '^(\\s*|.*\\|\\s*)find\\b',
-    '^(\\s*|.*\\|\\s*)sort\\b',
-    '^(\\s*|.*\\|\\s*)uniq\\b',
-    '^(\\s*|.*\\|\\s*)head\\b',
-    '^(\\s*|.*\\|\\s*)tail\\b',
-    '^(\\s*|.*\\|\\s*)less\\b',
-    '^(\\s*|.*\\|\\s*)more\\b',
-    
-    // 网络命令
-    '^(\\s*|.*\\|\\s*)ping\\b',
-    '^(\\s*|.*\\|\\s*)ping6\\b',
-    '^(\\s*|.*\\|\\s*)traceroute\\b',
-    '^(\\s*|.*\\|\\s*)tracepath\\b',
-    '^(\\s*|.*\\|\\s*)netstat\\b',
-    '^(\\s*|.*\\|\\s*)ifconfig\\b',
-    '^(\\s*|.*\\|\\s*)ip\\b',
-    
-    // 时间管理
-    '^(\\s*|.*\\|\\s*)date\\b',
-    '^(\\s*|.*\\|\\s*)hwclock\\b',
-    '^(\\s*|.*\\|\\s*)timedatectl\\b',
-    '^(\\s*|.*\\|\\s*)sleep(?! [0-9]{4,})\\b',
-    
-    // 其他
-    '^(\\s*|.*\\|\\s*)printf\\b',
-    '^(\\s*|.*\\|\\s*)export\\b',
-    '^(\\s*|.*\\|\\s*)source\\b',
-    '^(\\s*|.*\\|\\s*)alias\\b',
-    '^(\\s*|.*\\|\\s*)unalias\\b'
-  ]
+    high: [
+        // 文件系统操作
+        '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
+        '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
+        '^(\\s*|.*\\|\\s*)mkfs.\\b',
+        '^(\\s*|.*\\|\\s*)tee\\b',
+        '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*)',
+        '^(\\s*|.*\\|\\s*)cp\\b.*(--remove-destination.*|-f.*)',
+        '^(\\s*|.*\\|\\s*)mv\\b.*(--remove-destination.*|-f.*)',
+        '^(\\s*|.*\\|\\s*)find\\s+\\/.*-exec\\s+rm\\b',
+        '^(\\s*|.*\\|\\s*)find\\s+\\/.*-delete\\b',
+        '^(\\s*|.*\\|\\s*)cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)\\b',
+        '^(\\s*|.*\\|\\s*)echo\\b.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/',
+
+        // 系统文件修改
+        '^(\\s*|.*\\|\\s*)echo.*>/etc/passwd\\b',
+        '^(\\s*|.*\\|\\s*)echo.*>/etc/shadow\\b',
+        '^(\\s*|.*\\|\\s*)echo.*>/etc/fstab\\b',
+        '^(\\s*|.*\\|\\s*)sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
+        '^(\\s*|.*\\|\\s*)awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
+
+        // 权限提升
+        '^(\\s*|.*\\|\\s*)su\\b',
+        '^(\\s*|.*\\|\\s*)sudo\\b',
+        '^(\\s*|.*\\|\\s*)adb root\\b',
+        '^(\\s*|.*\\|\\s*)adb remount\\b',
+        '^(\\s*|.*\\|\\s*)setenforce 0\\b',
+
+        // 远程代码执行
+        '^(\\s*|.*\\|\\s*)wget.*\\|.*(sh|bash|zsh|ksh)\\b',
+        '^(\\s*|.*\\|\\s*)curl.*\\|.*(sh|bash|zsh|ksh)\\b',
+        '^(\\s*|.*\\|\\s*)python.*<.*http\\b',
+        '^(\\s*|.*\\|\\s*)perl.*<.*http\\b',
+
+        // 系统控制
+        '^(\\s*|.*\\|\\s*);reboot\\b',
+        '^(\\s*|.*\\|\\s*);shutdown\\b',
+        '^(\\s*|.*\\|\\s*);halt\\b',
+        '^(\\s*|.*\\|\\s*);poweroff\\b',
+        '^(\\s*|.*\\|\\s*)killall system_server\\b',
+
+        // 权限设置
+        '^(\\s*|.*\\|\\s*)chmod\\b.*(777|775|000|666)\\b',
+        '^(\\s*|.*\\|\\s*)\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)',
+
+        // 无限循环
+        '^(\\s*|.*\\|\\s*)while true.*\\&\\b',
+        '^(\\s*|.*\\|\\s*)for.*;;.*\\&\\b',
+        '^(\\s*|.*\\|\\s*)while.*1.*\\&\\b',
+        '^(\\s*|.*\\|\\s*)until.*0.*\\&\\b',
+
+        // 资源耗尽
+        '^(\\s*|.*\\|\\s*)yes\\b',
+        '^(\\s*|.*\\|\\s*)yes.*\\&\\b',
+        '^(\\s*|.*\\|\\s*)dd if=/dev/urandom of=/dev/sda\\b',
+        '^(\\s*|.*\\|\\s*)cat /dev/urandom > /dev/null\\b',
+        '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b'
+    ],
+    medium: [
+        // 文件系统操作
+        '^(\\s*|.*\\|\\s*)chmod(?!.*(77[0-7]|666|000))\\b',
+        '^(\\s*|.*\\|\\s*)chown\\b',
+        '^(\\s*|.*\\|\\s*)chgrp\\b',
+        '^(\\s*|.*\\|\\s*)mount\\b',
+        '^(\\s*|.*\\|\\s*)umount\\b',
+        '^(\\s*|.*\\|\\s*)ln -s\\b',
+        '^(\\s*|.*\\|\\s*)touch\\b',
+        '^(\\s*|.*\\|\\s*)mkdir\\b',
+        '^(\\s*|.*\\|\\s*)rmdir\\b',
+        '^(\\s*|.*\\|\\s*)rm(?! -rf| -fr)\\b',
+
+        // 用户管理
+        '^(\\s*|.*\\|\\s*)useradd\\b',
+        '^(\\s*|.*\\|\\s*)userdel\\b',
+        '^(\\s*|.*\\|\\s*)groupadd\\b',
+        '^(\\s*|.*\\|\\s*)groupdel\\b',
+        '^(\\s*|.*\\|\\s*)passwd\\b',
+        '^(\\s*|.*\\|\\s*)usermod\\b',
+
+        // 临时目录操作
+        '^(\\s*|.*\\|\\s*).*\\/tmp\\/.*\\b',
+        '^(\\s*|.*\\|\\s*).*\\/var\\/tmp\\/.*\\b',
+        '^(\\s*|.*\\|\\s*).*\\/dev\\/shm\\/.*\\b',
+
+        // 网络命令
+        '^(\\s*|.*\\|\\s*)wget(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
+        '^(\\s*|.*\\|\\s*)curl(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
+        '^(\\s*|.*\\|\\s*)telnet\\b',
+        '^(\\s*|.*\\|\\s*)ftp\\b',
+        '^(\\s*|.*\\|\\s*)nc\\b',
+        '^(\\s*|.*\\|\\s*)ncat\\b',
+        '^(\\s*|.*\\|\\s*)ssh\\b',
+        '^(\\s*|.*\\|\\s*)scp\\b',
+        '^(\\s*|.*\\|\\s*)rsync\\b',
+
+        // 系统控制
+        '^(\\s*|.*\\|\\s*)reboot\\b',
+        '^(\\s*|.*\\|\\s*)shutdown\\b',
+        '^(\\s*|.*\\|\\s*)halt\\b',
+        '^(\\s*|.*\\|\\s*)poweroff\\b',
+        '^(\\s*|.*\\|\\s*)reboot recovery\\b',
+        '^(\\s*|.*\\|\\s*)reboot bootloader\\b',
+
+        // 包管理
+        '^(\\s*|.*\\|\\s*)pm uninstall\\b',
+        '^(\\s*|.*\\|\\s*)am start\\b',
+        '^(\\s*|.*\\|\\s*)adb install\\b',
+        '^(\\s*|.*\\|\\s*)adb uninstall\\b'
+    ],
+    low: [
+        // 系统信息
+        '^(\\s*|.*\\|\\s*)ls\\b',
+        '^(\\s*|.*\\|\\s*)df\\b',
+        '^(\\s*|.*\\|\\s*)du\\b',
+        '^(\\s*|.*\\|\\s*)ps\\b',
+        '^(\\s*|.*\\|\\s*)top\\b',
+        '^(\\s*|.*\\|\\s*)free\\b',
+        '^(\\s*|.*\\|\\s*)uptime\\b',
+
+        // 文件操作
+        '^(\\s*|.*\\|\\s*)cp(?!.*--remove-destination.*|-f.*)\\b',
+        '^(\\s*|.*\\|\\s*)mv(?!.*--remove-destination.*|-f.*)\\b',
+        '^(\\s*|.*\\|\\s*)grep\\b',
+        '^(\\s*|.*\\|\\s*)find\\b',
+        '^(\\s*|.*\\|\\s*)sort\\b',
+        '^(\\s*|.*\\|\\s*)uniq\\b',
+        '^(\\s*|.*\\|\\s*)head\\b',
+        '^(\\s*|.*\\|\\s*)tail\\b',
+        '^(\\s*|.*\\|\\s*)less\\b',
+        '^(\\s*|.*\\|\\s*)more\\b',
+
+        // 网络命令
+        '^(\\s*|.*\\|\\s*)ping\\b',
+        '^(\\s*|.*\\|\\s*)ping6\\b',
+        '^(\\s*|.*\\|\\s*)traceroute\\b',
+        '^(\\s*|.*\\|\\s*)tracepath\\b',
+        '^(\\s*|.*\\|\\s*)netstat\\b',
+        '^(\\s*|.*\\|\\s*)ifconfig\\b',
+        '^(\\s*|.*\\|\\s*)ip\\b',
+
+        // 时间管理
+        '^(\\s*|.*\\|\\s*)date\\b',
+        '^(\\s*|.*\\|\\s*)hwclock\\b',
+        '^(\\s*|.*\\|\\s*)timedatectl\\b',
+        '^(\\s*|.*\\|\\s*)sleep(?! [0-9]{4,})\\b',
+
+        // 其他
+        '^(\\s*|.*\\|\\s*)printf\\b',
+        '^(\\s*|.*\\|\\s*)export\\b',
+        '^(\\s*|.*\\|\\s*)source\\b',
+        '^(\\s*|.*\\|\\s*)alias\\b',
+        '^(\\s*|.*\\|\\s*)unalias\\b'
+    ]
 };
 
 // 命令详细解释
 const COMMAND_EXPLANATIONS = {
-  'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
-  'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
-  'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
-  'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”',
-  'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
-  'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行',
-  'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
-  'while true': '无限循环命令，可能导致系统资源耗尽',
-  'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
-  'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
-  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
+    'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
+    'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
+    'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
+    'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”',
+    'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
+    'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行',
+    'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
+    'while true': '无限循环命令，可能导致系统资源耗尽',
+    'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
+    'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
+    'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
 };
 
 // 安全注释列表
 const SAFETY_COMMENTS = {
-  'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
-  'reboot': '系统重启命令，在适当场景下是安全的',
-  'shutdown -h now': '正常关闭系统，不会造成破坏',
-  'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置',
-  'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置',
-  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
-  'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
-  'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
-  'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
+    'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
+    'reboot': '系统重启命令，在适当场景下是安全的',
+    'shutdown -h now': '正常关闭系统，不会造成破坏',
+    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置',
+    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置',
+    'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
+    'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
+    'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
+    'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
 };
+
+// 检测代码是否被压缩
+function isCompressedCode(content) {
+    const lines = content.split('\n');
+    const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
+    return avgLineLength > 100; // 可以根据实际情况调整阈值
+}
+
+// 检测变量名是否被重命名
+function hasRenamedVariables(content) {
+    const variableRegex = /\b([a-zA-Z_$][0-9a-zA-Z_$]*)\b/g;
+    const variables = [];
+    let match;
+    while ((match = variableRegex.exec(content))!== null) {
+        variables.push(match[1]);
+    }
+    if (variables.length === 0) return false;
+    const avgLength = variables.reduce((sum, varName) => sum + varName.length, 0) / variables.length;
+    return avgLength < 3; // 可以根据实际情况调整阈值
+}
+
+// 检测Base64编码
+function hasBase64Encoded(content) {
+    const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+    const words = content.split(/\s+/);
+    for (const word of words) {
+        if (base64Regex.test(word)) {
+            try {
+                atob(word);
+                return true;
+            } catch (error) {
+                continue;
+            }
+        }
+    }
+    return false;
+}
+
+// 检测Base58编码
+function hasBase58Encoded(content) {
+    const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+    const words = content.split(/\s+/);
+    for (const word of words) {
+        if (base58Regex.test(word)) {
+            // 这里只是简单检测，实际解码需要使用Base58库
+            return true;
+        }
+    }
+    return false;
+}
 
 // 改进的分析函数
 function analyzeShellScript(fileName, content) {
-  const issues = [];
-  
-  // 按行分割内容
-  const lines = content.split('\n');
-  
-  // 检查是否为加密脚本
-  const isEncrypted = lines.some(line => 
-    line.includes('ENC[') || 
-    line.includes('openssl enc') || 
-    line.includes('gpg --encrypt')
-  );
-  
-  if (isEncrypted) {
+    const issues = [];
+
+    // 按行分割内容
+    const lines = content.split('\n');
+
+    // 检查是否为加密脚本
+    const isEncrypted = lines.some(line => 
+        line.includes('ENC[') || 
+        line.includes('openssl enc') || 
+        line.includes('gpg --encrypt')
+    );
+
+    if (isEncrypted) {
+        return {
+            fileName,
+            encrypted: true,
+            issues: [],
+            content
+        };
+    }
+
+    // 检测常见混淆
+    if (isCompressedCode(content)) {
+        issues.push({
+            line: 0,
+            command: '代码压缩',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码可能被压缩，增加了代码的可读性难度'
+        });
+    }
+    if (hasRenamedVariables(content)) {
+        issues.push({
+            line: 0,
+            command: '变量重命名',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度'
+        });
+    }
+
+    // 检测Base64和Base58编码
+    if (hasBase64Encoded(content)) {
+        issues.push({
+            line: 0,
+            command: 'Base64编码',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度'
+        });
+    }
+    if (hasBase58Encoded(content)) {
+        issues.push({
+            line: 0,
+            command: 'Base58编码',
+            lineContent: content,
+            severity: 'medium',
+            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度'
+        });
+    }
+
+    // 检查每一行是否包含危险命令
+    lines.forEach((line, lineNumber) => {
+        // 跳过空行和注释
+        if (!line.trim() || line.trim().startsWith('#')) return;
+
+        // 检查高风险命令
+        DANGEROUS_COMMANDS.high.forEach(command => {
+            const regex = new RegExp(command);
+            if (regex.test(line)) {
+                issues.push({
+                    line: lineNumber + 1,
+                    command: command.replace(/\\\*|\(\?!.*\)/g, ''),
+                    lineContent: line,
+                    severity: 'high',
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，可能导致系统损坏或数据丢失'
+                });
+            }
+        });
+
+        // 检查中风险命令
+        DANGEROUS_COMMANDS.medium.forEach(command => {
+            const regex = new RegExp(command);
+            if (regex.test(line)) {
+                issues.push({
+                    line: lineNumber + 1,
+                    command: command.replace(/\\\*|\(\?!.*\)/g, ''),
+                    lineContent: line,
+                    severity: 'medium',
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，可能影响系统配置或安全'
+                });
+            }
+        });
+
+        // 检查低风险命令
+        DANGEROUS_COMMANDS.low.forEach(command => {
+            const regex = new RegExp(command);
+            if (regex.test(line)) {
+                issues.push({
+                    line: lineNumber + 1,
+                    command: command.replace(/\\\*|\(\?!.*\)/g, ''),
+                    lineContent: line,
+                    severity: 'low',
+                    explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，可能影响系统性能或资源使用'
+                });
+            }
+        });
+    });
+
     return {
-      fileName,
-      encrypted: true,
-      issues: [],
-      content
+        fileName,
+        encrypted: false,
+        issues,
+        content
     };
-  }
-  
-  // 检查每一行是否包含危险命令
-  lines.forEach((line, lineNumber) => {
-    // 跳过空行和注释
-    if (!line.trim() || line.trim().startsWith('#')) return;
-    
-    // 检查高风险命令
-    DANGEROUS_COMMANDS.high.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'high',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，可能导致系统损坏或数据丢失'
-        });
-      }
-    });
-    
-    // 检查中风险命令
-    DANGEROUS_COMMANDS.medium.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'medium',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，可能影响系统配置或安全'
-        });
-      }
-    });
-    
-    // 检查低风险命令
-    DANGEROUS_COMMANDS.low.forEach(command => {
-      const regex = new RegExp(command);
-      if (regex.test(line)) {
-        issues.push({
-          line: lineNumber + 1,
-          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
-          lineContent: line,
-          severity: 'low',
-          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，可能影响系统性能或资源使用'
-        });
-      }
-    });
-  });
-  
-  return {
-    fileName,
-    encrypted: false,
-    issues,
-    content
-  };
 }
 
 // 显示文件详情改进
 function showFileDetails(result) {
-  modalTitle.textContent = result.fileName;
-  
-  if (result.encrypted) {
-    modalContent.innerHTML = `
-      <div class="text-center py-8">
-        <div class="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
-          <i class="fa fa-lock text-warning text-2xl"></i>
-        </div>
-        <h4 class="font-semibold text-gray-800">加密脚本</h4>
-        <p class="text-gray-500 mt-2">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
-      </div>
-    `;
-  } else if (result.error) {
-    modalContent.innerHTML = `
-      <p class="text-danger">${result.error}</p>
-    `;
-  } else {
-    if (result.issues.length === 0) {
-      modalContent.innerHTML = `
-        <div class="text-center py-8">
-          <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-            <i class="fa fa-check text-success text-2xl"></i>
-          </div>
-          <h4 class="font-semibold text-gray-800">文件安全</h4>
-          <p class="text-gray-500 mt-2">未检测到任何危险命令</p>
-        </div>
-      `;
-    } else {
-      let issuesHTML = '';
-      
-      result.issues.forEach(issue => {
-        const severityClass = issue.severity === 'high' ? 'bg-danger/10 text-danger' : 
-                              issue.severity === 'medium' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info';
-        const severityText = issue.severity === 'high' ? '高风险' : 
-                              issue.severity === 'medium' ? '中风险' : '低风险';
-        
-        // 检查是否有安全注释
-        const safetyComment = Object.keys(SAFETY_COMMENTS).find(key => 
-          new RegExp(key).test(issue.lineContent)
-        );
-        
-        issuesHTML += `
-          <div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">
-            <div class="p-3 ${severityClass}">
-              <div class="flex justify-between items-center">
-                <span class="font-medium">${severityText}</span>
-                <span class="text-xs">第 ${issue.line} 行</span>
-              </div>
+    modalTitle.textContent = result.fileName;
+
+    if (result.encrypted) {
+        modalContent.innerHTML = `
+            <div class="text-center py-8">
+                <div class="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa fa-lock text-warning text-2xl"></i>
+                </div>
+                <h4 class="font-semibold text-gray-800">加密脚本</h4>
+                <p class="text-gray-500 mt-2">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
             </div>
-            <div class="p-4">
-              <p class="text-sm text-gray-700 mb-2">
-                包含危险命令: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">${issue.command}</code>
-              </p>
-              <p class="text-xs text-gray-500 mb-3">
-                <i class="fa fa-info-circle mr-1"></i>
-                ${issue.explanation}
-              </p>
-              <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${issue.lineContent}</pre>
-              ${safetyComment ? `<div class="mt-3 p-2 bg-primary/5 rounded text-xs text-primary">注释: ${SAFETY_COMMENTS[safetyComment]}</div>` : ''}
-            </div>
-          </div>
         `;
-      });
-      
-      modalContent.innerHTML = `
-        <div class="mb-6">
-          <h5 class="font-semibold text-gray-800 mb-3">检测到的问题</h5>
-          ${issuesHTML}
-        </div>
-        <div>
-          <h5 class="font-semibold text-gray-800 mb-3">文件内容</h5>
-          <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs" style="max-height: 400px;">${result.content}</pre>
-        </div>
-      `;
+    } else if (result.error) {
+        modalContent.innerHTML = `
+            <p class="text-danger">${result.error}</p>
+        `;
+    } else {
+        if (result.issues.length === 0) {
+            modalContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-check text-success text-2xl"></i>
+                    </div>
+                    <h4 class="font-semibold text-gray-800">文件安全</h4>
+                    <p class="text-gray-500 mt-2">未检测到任何危险命令</p>
+                </div>
+            `;
+        } else {
+            let issuesHTML = '';
+
+            result.issues.forEach(issue => {
+                const severityClass = issue.severity === 'high' ? 'bg-danger/10 text-danger' : 
+                                      issue.severity === 'medium' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info';
+                const severityText = issue.severity === 'high' ? '高风险' : 
+                                      issue.severity === 'medium' ? '中风险' : '低风险';
+
+                // 检查是否有安全注释
+                const safetyComment = Object.keys(SAFETY_COMMENTS).find(key => 
+                    new RegExp(key).test(issue.lineContent)
+                );
+
+                issuesHTML += `
+                    <div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="p-3 ${severityClass}">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">${severityText}</span>
+                                <span class="text-xs">第 ${issue.line} 行</span>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-sm text-gray-700 mb-2">
+                                包含危险命令: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">${issue.command}</code>
+                            </p>
+                            <p class="text-xs text-gray-500 mb-3">
+                                <i class="fa fa-info-circle mr-1"></i>
+                                ${issue.explanation}
+                            </p>
+                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${issue.lineContent}</pre>
+                            ${safetyComment ? `<div class="mt-3 p-2 bg-primary/5 rounded text-xs text-primary">注释: ${SAFETY_COMMENTS[safetyComment]}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            modalContent.innerHTML = `
+                <div class="mb-6">
+                    <h5 class="font-semibold text-gray-800 mb-3">检测到的问题</h5>
+                    ${issuesHTML}
+                </div>
+                <div>
+                    <h5 class="font-semibold text-gray-800 mb-3">文件内容</h5>
+                    <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs" style="max-height: 400px;">${result.content}</pre>
+                </div>
+            `;
+        }
     }
-  }
-  
-  modal.classList.remove('hidden');
+
+    modal.classList.remove('hidden');
 }    
 
 if (typeof closeModal !== 'function') {
-  function closeModal() {
-    const modal = document.getElementById('modal');
-    if (modal) {
-      modal.classList.add('hidden');
+    function closeModal() {
+        const modal = document.getElementById('modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
     }
-  }
 }
 
 // 绑定关闭按钮事件，防止因重复加载脚本或作用域污染导致未绑定
 window.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('modal');
-  const closeModalBtn = document.getElementById('close-modal-btn');
-  const closeModalIcon = document.getElementById('close-modal');
+    const modal = document.getElementById('modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const closeModalIcon = document.getElementById('close-modal');
 
-  if (closeModalBtn) {
-    closeModalBtn.onclick = closeModal;
-  }
+    if (closeModalBtn) {
+        closeModalBtn.onclick = closeModal;
+    }
 
-  if (closeModalIcon) {
-    closeModalIcon.onclick = closeModal;
-  }
+    if (closeModalIcon) {
+        closeModalIcon.onclick = closeModal;
+    }
 
-  if (modal) {
-    modal.onclick = function(e) {
-      if (e.target === modal) {
-        closeModal();
-      }
-    };
-  }
+    if (modal) {
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+    }
 });
