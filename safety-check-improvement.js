@@ -292,19 +292,31 @@ function hasStringConcatenationObfuscation(content) {
     return concatRegex.test(content) || charCodeRegex.test(content);
 }
 
-// 更严格地分析字符频率（提高阈值并增加更多条件）
-function analyzeCharacterFrequency(content) {
-    const charMap = {};
-    for (const char of content) {
-        charMap[char] = (charMap[char] || 0) + 1;
+function analyzeShellScript(content) {
+  // 1. 移除所有包含 ui_print、print 或 echo 的行
+  const cleanedContent = content
+    .replace(/^[ \t]*(ui_print|print|echo)[ \t].*$/gm, '') // 移除整行
+    .replace(/(['"])(?:\\.|[^\\])*?\1/g, '""');
+
+  // 2. 统计字符频率
+  const charFrequency = {};
+  for (const char of cleanedContent) {
+    if (charFrequency[char]) {
+      charFrequency[char]++;
+    } else {
+      charFrequency[char] = 1;
     }
-    
-    // 计算ASCII字符与非ASCII字符的比例
-    const asciiChars = Object.keys(charMap).filter(char => char.charCodeAt(0) < 128).length;
-    const nonAsciiChars = Object.keys(charMap).length - asciiChars;
-    
-    // 要求非ASCII字符比例超过30%，并且包含多种不同的非ASCII字符
-    return nonAsciiChars / (asciiChars + nonAsciiChars) > 0.3 && nonAsciiChars > 10;
+  }
+
+  // 3. 找出非 ASCII 可打印字符
+  const unusualChars = Object.entries(charFrequency)
+    .filter(([char, count]) => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code > 126;
+    })
+    .sort((a, b) => b[1] - a[1]); // 按频率降序排列
+
+  return unusualChars;
 }
 
 // 更严格地检测异常转义序列（提高阈值并检查分布）
