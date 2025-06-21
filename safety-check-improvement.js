@@ -1,6 +1,8 @@
 const DANGEROUS_COMMANDS = {
   high: [
     // 文件系统操作
+    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
+    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
     '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
     '^(\\s*|.*\\|\\s*)mkfs.\\b',
     '^(\\s*|.*\\|\\s*)tee\\b',
@@ -128,10 +130,10 @@ const DANGEROUS_COMMANDS = {
     '^(\\s*|.*\\|\\s*)tail\\b',
     '^(\\s*|.*\\|\\s*)less\\b',
     '^(\\s*|.*\\|\\s*)more\\b',
-    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
-    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
     
     // 网络命令
+    '^(\\s*|.*\\|\\s*)ping\\b',
+    '^(\\s*|.*\\|\\s*)ping6\\b',
     '^(\\s*|.*\\|\\s*)traceroute\\b',
     '^(\\s*|.*\\|\\s*)tracepath\\b',
     '^(\\s*|.*\\|\\s*)netstat\\b',
@@ -154,7 +156,7 @@ const DANGEROUS_COMMANDS = {
   ]
 };
 
-// 命令详细解释 - 修复了语法错误（添加了缺失的逗号）
+// 命令详细解释
 const COMMAND_EXPLANATIONS = {
   'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
   'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
@@ -166,8 +168,7 @@ const COMMAND_EXPLANATIONS = {
   'while true': '无限循环命令，可能导致系统资源耗尽',
   'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
   'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
-  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启', // 添加了缺失的逗号
-  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有“>”,">>","tee"字样的命令。</span>'
+  'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
 };
 
 // 安全注释列表
@@ -177,13 +178,13 @@ const SAFETY_COMMENTS = {
   'shutdown -h now': '正常关闭系统，不会造成破坏',
   'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置',
   'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置',
+  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作',
   'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作',
   'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险',
   'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险'
 };
 
-
-// 改进的分析函数 - 移除了函数内部的重复定义
+// 改进的分析函数
 function analyzeShellScript(fileName, content) {
   const issues = [];
   
@@ -205,102 +206,54 @@ function analyzeShellScript(fileName, content) {
       content
     };
   }
- 
-// 检查每一行是否包含危险命令
+  
+  // 检查每一行是否包含危险命令
   lines.forEach((line, lineNumber) => {
     // 跳过空行和注释
     if (!line.trim() || line.trim().startsWith('#')) return;
     
     // 检查高风险命令
-    DANGEROUS_COMMANDS.high.forEach(item => {
-      if (item.regex.test(line)) {
+    DANGEROUS_COMMANDS.high.forEach(command => {
+      const regex = new RegExp(command);
+      if (regex.test(line)) {
         issues.push({
           line: lineNumber + 1,
-          command: item.display,
+          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
           lineContent: line,
           severity: 'high',
-          explanation: item.explanation
+          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '高风险命令，可能导致系统损坏或数据丢失'
         });
       }
     });
     
-    // 类似地处理中风险和低风险命令
-    DANGEROUS_COMMANDS.medium.forEach(item => {
-      if (item.regex.test(line)) {
+    // 检查中风险命令
+    DANGEROUS_COMMANDS.medium.forEach(command => {
+      const regex = new RegExp(command);
+      if (regex.test(line)) {
         issues.push({
           line: lineNumber + 1,
-          command: item.display,
+          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
           lineContent: line,
           severity: 'medium',
-          explanation: item.explanation
+          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '中风险命令，可能影响系统配置或安全'
         });
       }
     });
     
-    DANGEROUS_COMMANDS.low.forEach(item => {
-      if (item.regex.test(line)) {
+    // 检查低风险命令
+    DANGEROUS_COMMANDS.low.forEach(command => {
+      const regex = new RegExp(command);
+      if (regex.test(line)) {
         issues.push({
           line: lineNumber + 1,
-          command: item.display,
+          command: command.replace(/\\\*|\(\?!.*\)/g, ''),
           lineContent: line,
           severity: 'low',
-          explanation: item.explanation
+          explanation: COMMAND_EXPLANATIONS[command.replace(/\\\*|\(\?!.*\)/g, '')] || '低风险命令，可能影响系统性能或资源使用'
         });
       }
     });
   });
-  
-  return {
-    fileName,
-    encrypted: false,
-    issues,
-    content
-  };
-}
-
-// 检查每一行是否包含危险命令
-lines.forEach((line, lineNumber) => {
-  // 跳过空行和注释
-  if (!line.trim() || line.trim().startsWith('#')) return;
-  
-  // 检查高风险命令
-  DANGEROUS_COMMANDS.high.forEach(item => {
-    if (item.regex.test(line)) {
-      issues.push({
-        line: lineNumber + 1,
-        command: item.display,
-        lineContent: line,
-        severity: 'high',
-        explanation: item.explanation
-      });
-    }
-  });
-  
-  // 类似地处理中风险和低风险命令
-  DANGEROUS_COMMANDS.medium.forEach(item => {
-    if (item.regex.test(line)) {
-      issues.push({
-        line: lineNumber + 1,
-        command: item.display,
-        lineContent: line,
-        severity: 'medium',
-        explanation: item.explanation
-      });
-    }
-  });
-  
-  DANGEROUS_COMMANDS.low.forEach(item => {
-    if (item.regex.test(line)) {
-      issues.push({
-        line: lineNumber + 1,
-        command: item.display,
-        lineContent: line,
-        severity: 'low',
-        explanation: item.explanation
-      });
-    }
-  });
-});
   
   return {
     fileName,
