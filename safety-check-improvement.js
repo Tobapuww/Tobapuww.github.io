@@ -1,79 +1,158 @@
-// 危险命令列表，按风险级别分类
 const DANGEROUS_COMMANDS = {
-high: [
-  // 文件系统操作
-  'rm -rf(?! /data/adb/\\*)', 'rm -fr(?! /data/adb/\\*)', 'dd if=/dev/zero', 'mkfs.', 'tee',
-  'cat(.*>.*|.*>>.*|.*<.*|.*<<.*)', // 带重定向的cat命令
-  'cp(.*--remove-destination.*|.*-f.*)', // 强制复制命令
-  'mv(.*--remove-destination.*|.*-f.*)', // 强制移动命令
-  'find\\s+\\/.*-exec\\s+rm',
-  'find\\s+\\/.*-delete',
-  'cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)', // 切换目录后执行危险命令
-  'echo\\s+.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/', // 写入系统目录
-  
-  // 系统文件修改
-  'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'echo.*>/etc/fstab',
-  'sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)',
-  'awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)',
-  
-  // 权限提升
-  'su', 'sudo', 'adb root', 'adb remount', 'setenforce 0',
-  
-  // 远程代码执行
-  'wget.*\\|.*(sh|bash|zsh|ksh)', 'curl.*\\|.*(sh|bash|zsh|ksh)',
-  'python.*<.*http', 'perl.*<.*http',
-  
-  // 系统控制
-  ';reboot', ';shutdown', ';halt', ';poweroff', 'killall system_server',
-  
-  // 权限设置
-  'chmod.*(777|775|000|666)', // 高风险权限值
-  '\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)', // 系统目录权限剥夺
-  
-  // 无限循环
-  'while true.*\\&', 'for.*;;.*\\&', 'while.*1.*\\&', 'until.*0.*\\&',
-  
-  // 资源耗尽
-  'yes', 'yes.*\\&', 'dd if=/dev/urandom of=/dev/sda',
-  'cat /dev/urandom > /dev/null', 'cat /dev/zero > /dev/null'
-],
-  medium: [
+  high: [
     // 文件系统操作
-    'chmod(?!.*(77[0-7]|666|000))', 'chown', 'chgrp', 'mount', 'umount',
-    'ln -s', 'touch', 'mkdir', 'rmdir', 'rm(?! -rf| -fr)',
+    '^(\\s*|.*\\|\\s*)rm -rf(?! /data/adb/\\*)\\b',
+    '^(\\s*|.*\\|\\s*)rm -fr(?! /data/adb/\\*)\\b',
+    '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
+    '^(\\s*|.*\\|\\s*)mkfs.\\b',
+    '^(\\s*|.*\\|\\s*)tee\\b',
+    '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*)',
+    '^(\\s*|.*\\|\\s*)cp\\b.*(--remove-destination.*|-f.*)',
+    '^(\\s*|.*\\|\\s*)mv\\b.*(--remove-destination.*|-f.*)',
+    '^(\\s*|.*\\|\\s*)find\\s+\\/.*-exec\\s+rm\\b',
+    '^(\\s*|.*\\|\\s*)find\\s+\\/.*-delete\\b',
+    '^(\\s*|.*\\|\\s*)cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)\\b',
+    '^(\\s*|.*\\|\\s*)echo\\b.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/',
     
-    // 用户管理
-    'useradd', 'userdel', 'groupadd', 'groupdel', 'passwd', 'usermod',
+    // 系统文件修改
+    '^(\\s*|.*\\|\\s*)echo.*>/etc/passwd\\b',
+    '^(\\s*|.*\\|\\s*)echo.*>/etc/shadow\\b',
+    '^(\\s*|.*\\|\\s*)echo.*>/etc/fstab\\b',
+    '^(\\s*|.*\\|\\s*)sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
+    '^(\\s*|.*\\|\\s*)awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
     
-    // 临时目录操作
-    '.*\\/tmp\\/.*', '.*\\/var\\/tmp\\/.*', '.*\\/dev\\/shm\\/.*',
+    // 权限提升
+    '^(\\s*|.*\\|\\s*)su\\b',
+    '^(\\s*|.*\\|\\s*)sudo\\b',
+    '^(\\s*|.*\\|\\s*)adb root\\b',
+    '^(\\s*|.*\\|\\s*)adb remount\\b',
+    '^(\\s*|.*\\|\\s*)setenforce 0\\b',
     
-    // 网络命令
-    'wget(?!.*\\|.*(sh|bash|zsh|ksh))', 'curl(?!.*\\|.*(sh|bash|zsh|ksh))',
-    'telnet', 'ftp', 'nc', 'ncat', 'ssh', 'scp', 'rsync',
+    // 远程代码执行
+    '^(\\s*|.*\\|\\s*)wget.*\\|.*(sh|bash|zsh|ksh)\\b',
+    '^(\\s*|.*\\|\\s*)curl.*\\|.*(sh|bash|zsh|ksh)\\b',
+    '^(\\s*|.*\\|\\s*)python.*<.*http\\b',
+    '^(\\s*|.*\\|\\s*)perl.*<.*http\\b',
     
     // 系统控制
-    'reboot', 'shutdown', 'halt', 'poweroff', 'reboot recovery', 'reboot bootloader',
+    '^(\\s*|.*\\|\\s*);reboot\\b',
+    '^(\\s*|.*\\|\\s*);shutdown\\b',
+    '^(\\s*|.*\\|\\s*);halt\\b',
+    '^(\\s*|.*\\|\\s*);poweroff\\b',
+    '^(\\s*|.*\\|\\s*)killall system_server\\b',
+    
+    // 权限设置
+    '^(\\s*|.*\\|\\s*)chmod\\b.*(777|775|000|666)\\b',
+    '^(\\s*|.*\\|\\s*)\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)',
+    
+    // 无限循环
+    '^(\\s*|.*\\|\\s*)while true.*\\&\\b',
+    '^(\\s*|.*\\|\\s*)for.*;;.*\\&\\b',
+    '^(\\s*|.*\\|\\s*)while.*1.*\\&\\b',
+    '^(\\s*|.*\\|\\s*)until.*0.*\\&\\b',
+    
+    // 资源耗尽
+    '^(\\s*|.*\\|\\s*)yes\\b',
+    '^(\\s*|.*\\|\\s*)yes.*\\&\\b',
+    '^(\\s*|.*\\|\\s*)dd if=/dev/urandom of=/dev/sda\\b',
+    '^(\\s*|.*\\|\\s*)cat /dev/urandom > /dev/null\\b',
+    '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b'
+  ],
+  medium: [
+    // 文件系统操作
+    '^(\\s*|.*\\|\\s*)chmod(?!.*(77[0-7]|666|000))\\b',
+    '^(\\s*|.*\\|\\s*)chown\\b',
+    '^(\\s*|.*\\|\\s*)chgrp\\b',
+    '^(\\s*|.*\\|\\s*)mount\\b',
+    '^(\\s*|.*\\|\\s*)umount\\b',
+    '^(\\s*|.*\\|\\s*)ln -s\\b',
+    '^(\\s*|.*\\|\\s*)touch\\b',
+    '^(\\s*|.*\\|\\s*)mkdir\\b',
+    '^(\\s*|.*\\|\\s*)rmdir\\b',
+    '^(\\s*|.*\\|\\s*)rm(?! -rf| -fr)\\b',
+    
+    // 用户管理
+    '^(\\s*|.*\\|\\s*)useradd\\b',
+    '^(\\s*|.*\\|\\s*)userdel\\b',
+    '^(\\s*|.*\\|\\s*)groupadd\\b',
+    '^(\\s*|.*\\|\\s*)groupdel\\b',
+    '^(\\s*|.*\\|\\s*)passwd\\b',
+    '^(\\s*|.*\\|\\s*)usermod\\b',
+    
+    // 临时目录操作
+    '^(\\s*|.*\\|\\s*).*\\/tmp\\/.*\\b',
+    '^(\\s*|.*\\|\\s*).*\\/var\\/tmp\\/.*\\b',
+    '^(\\s*|.*\\|\\s*).*\\/dev\\/shm\\/.*\\b',
+    
+    // 网络命令
+    '^(\\s*|.*\\|\\s*)wget(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
+    '^(\\s*|.*\\|\\s*)curl(?!.*\\|.*(sh|bash|zsh|ksh))\\b',
+    '^(\\s*|.*\\|\\s*)telnet\\b',
+    '^(\\s*|.*\\|\\s*)ftp\\b',
+    '^(\\s*|.*\\|\\s*)nc\\b',
+    '^(\\s*|.*\\|\\s*)ncat\\b',
+    '^(\\s*|.*\\|\\s*)ssh\\b',
+    '^(\\s*|.*\\|\\s*)scp\\b',
+    '^(\\s*|.*\\|\\s*)rsync\\b',
+    
+    // 系统控制
+    '^(\\s*|.*\\|\\s*)reboot\\b',
+    '^(\\s*|.*\\|\\s*)shutdown\\b',
+    '^(\\s*|.*\\|\\s*)halt\\b',
+    '^(\\s*|.*\\|\\s*)poweroff\\b',
+    '^(\\s*|.*\\|\\s*)reboot recovery\\b',
+    '^(\\s*|.*\\|\\s*)reboot bootloader\\b',
     
     // 包管理
-    'pm uninstall', 'am start', 'adb install', 'adb uninstall'
+    '^(\\s*|.*\\|\\s*)pm uninstall\\b',
+    '^(\\s*|.*\\|\\s*)am start\\b',
+    '^(\\s*|.*\\|\\s*)adb install\\b',
+    '^(\\s*|.*\\|\\s*)adb uninstall\\b'
   ],
   low: [
     // 系统信息
-    'ls', 'df', 'du', 'ps', 'top', 'free', 'uptime',
+    '^(\\s*|.*\\|\\s*)ls\\b',
+    '^(\\s*|.*\\|\\s*)df\\b',
+    '^(\\s*|.*\\|\\s*)du\\b',
+    '^(\\s*|.*\\|\\s*)ps\\b',
+    '^(\\s*|.*\\|\\s*)top\\b',
+    '^(\\s*|.*\\|\\s*)free\\b',
+    '^(\\s*|.*\\|\\s*)uptime\\b',
     
     // 文件操作
-    'cp(?!.*--remove-destination.*|.*-f.*)', 'mv(?!.*--remove-destination.*|.*-f.*)',
-    'grep', 'find', 'sort', 'uniq', 'head', 'tail', 'less', 'more',
+    '^(\\s*|.*\\|\\s*)cp(?!.*--remove-destination.*|-f.*)\\b',
+    '^(\\s*|.*\\|\\s*)mv(?!.*--remove-destination.*|-f.*)\\b',
+    '^(\\s*|.*\\|\\s*)grep\\b',
+    '^(\\s*|.*\\|\\s*)find\\b',
+    '^(\\s*|.*\\|\\s*)sort\\b',
+    '^(\\s*|.*\\|\\s*)uniq\\b',
+    '^(\\s*|.*\\|\\s*)head\\b',
+    '^(\\s*|.*\\|\\s*)tail\\b',
+    '^(\\s*|.*\\|\\s*)less\\b',
+    '^(\\s*|.*\\|\\s*)more\\b',
     
     // 网络命令
-    'ping', 'ping6', 'traceroute', 'tracepath', 'netstat', 'ifconfig', 'ip',
+    '^(\\s*|.*\\|\\s*)ping\\b',
+    '^(\\s*|.*\\|\\s*)ping6\\b',
+    '^(\\s*|.*\\|\\s*)traceroute\\b',
+    '^(\\s*|.*\\|\\s*)tracepath\\b',
+    '^(\\s*|.*\\|\\s*)netstat\\b',
+    '^(\\s*|.*\\|\\s*)ifconfig\\b',
+    '^(\\s*|.*\\|\\s*)ip\\b',
     
     // 时间管理
-    'date', 'hwclock', 'timedatectl', 'sleep(?! [0-9]{4,})',
+    '^(\\s*|.*\\|\\s*)date\\b',
+    '^(\\s*|.*\\|\\s*)hwclock\\b',
+    '^(\\s*|.*\\|\\s*)timedatectl\\b',
+    '^(\\s*|.*\\|\\s*)sleep(?! [0-9]{4,})\\b',
     
     // 其他
-    'echo(?!.*>.*|.*>>.*)', 'printf', 'export', 'source', 'alias', 'unalias',
+    '^(\\s*|.*\\|\\s*)echo(?!.*>.*|.*>>.*)\\b',
+    '^(\\s*|.*\\|\\s*)printf\\b',
+    '^(\\s*|.*\\|\\s*)export\\b',
+    '^(\\s*|.*\\|\\s*)source\\b',
+    '^(\\s*|.*\\|\\s*)alias\\b',
+    '^(\\s*|.*\\|\\s*)unalias\\b'
   ]
 };
 
