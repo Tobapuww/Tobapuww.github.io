@@ -10,6 +10,7 @@
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
   <!-- 引入JSZip库用于处理ZIP文件 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://raw.githubusercontent.com/Tobapuww/Tobapuww.github.io/refs/heads/main/safety-check-improvement.js"></script>
   
   <!-- 配置Tailwind自定义主题 -->
   <script>
@@ -74,7 +75,7 @@
     </div>
     <!-- 网站声明 -->
     <div class="bg-primary/10 text-primary text-center py-2 text-sm">
-      <p>本站开源且免费 | 因格机脚本泛滥，运行前请务必检查脚本安全性</p>
+      <p>本站开源且免费 | 欢迎各网站收录</p>
     </div>
   </header>
 
@@ -87,7 +88,7 @@
           检测您的 Shell 脚本安全问题
         </h2>
         <p class="text-gray-600 text-lg mb-8">
-          上传单个.sh文件或包含多个.sh文件的.zip（magisk模块）文件，我们将检测其中是否包含危险命令
+          上传单个.sh文件或包含多个.sh文件的.zip（Magisk模块）文件，我们将检测其中是否包含危险命令
         </p>
       </div>
     </section>
@@ -103,7 +104,7 @@
             <span>选择文件</span>
             <input type="file" id="file-input" class="hidden" accept=".sh,.zip" multiple>
           </label>
-          <p class="text-xs text-gray-500 mt-4">支持上传多个文件，最大文件大小：50MB</p>
+          <p class="text-xs text-gray-500 mt-4">支持同时上传和检测多个文件，最大文件大小：50MB</p>
         </div>
 
         <!-- 文件列表预览 -->
@@ -115,7 +116,7 @@
         <!-- 扫描按钮 -->
         <div class="mt-8 text-center">
           <button id="scan-button" class="bg-gradient-primary text-white font-medium py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <i class="fa fa-search mr-2"></i>开始安全扫描
+            <i class="fa fa-search mr-2"></i>开始扫描
           </button>
         </div>
       </div>
@@ -221,11 +222,8 @@
             <div>
               <h4 class="font-semibold text-gray-800">高风险命令</h4>
               <p class="text-gray-600 text-sm">
-                rm -rf, rm -fr, dd if=/dev/zero, mkfs., shutdown, reboot, halt, poweroff, kill -9, 直接修改系统配置文件, cat * > * 等
+                可能导致系统崩溃、数据丢失或严重安全漏洞的命令，如rm -rf, dd if=/dev/zero, 修改系统配置文件等
               </p>
-              <div class="mt-2 p-3 bg-gray-50 rounded text-xs">
-                <p class="text-gray-600"><span class="font-medium">例外情况：</span> rm -rf /data/adb/* 是删除Magisk模块缓存文件，不属于危险命令</p>
-              </div>
             </div>
           </div>
           
@@ -236,7 +234,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">中风险命令</h4>
               <p class="text-gray-600 text-sm">
-                chmod, chown, chgrp, sudo, su, 网络访问命令(wget, curl), 临时文件操作, cat * >> *, cp 等
+                可能影响系统配置或安全的命令，如chmod, 网络访问命令(wget, curl), 用户管理命令等
               </p>
             </div>
           </div>
@@ -248,7 +246,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">低风险命令</h4>
               <p class="text-gray-600 text-sm">
-                可能导致性能问题的命令(while true, sleep), 文件系统操作(mount, umount), 用户管理命令等
+                可能影响系统性能或资源使用的命令，如系统重启命令, 长时间休眠命令, 文件系统操作等
               </p>
             </div>
           </div>
@@ -306,28 +304,9 @@
     </div>
   </div>
 
+  <!-- 引入安全检测脚本 -->
+  <script src="safety-check-improvement.js"></script>
   <script>
-    // 危险命令列表，按风险级别分类
-    const DANGEROUS_COMMANDS = {
-      high: [
-        'rm -rf', 'rm -fr', 'dd if=/dev/zero', 'mkfs.', 'shutdown', 'reboot', 'halt', 'poweroff', 
-        'kill -9', 'vim /etc/passwd', 'nano /etc/passwd', 'echo.*>/etc/passwd', 'echo.*>/etc/shadow', 'cat * > *'
-      ],
-      medium: [
-        'chmod', 'chown', 'chgrp', 'sudo', 'su -', 'wget', 'curl', 'lynx', 'telnet', 'ftp',
-        '/tmp/', '/var/tmp/', '/dev/shm/', 'cat * >> *', 'cp'
-      ],
-      low: [
-        'while true', 'sleep 3600', 'sleep 86400', 'mount', 'umount', 'useradd', 'userdel', 
-        'groupadd', 'groupdel', 'passwd'
-      ]
-    };
-    
-    // 安全注释列表
-    const SAFETY_COMMENTS = {
-      'rm -rf /data/adb/*': '删除Magisk模块缓存文件，不属于危险命令'
-    };
-
     // 全局变量
     let selectedFiles = [];
     let scanResults = [];
@@ -536,66 +515,6 @@
       });
     }
 
-    // 分析Shell脚本
-    function analyzeShellScript(fileName, content) {
-      const issues = [];
-      
-      // 按行分割内容
-      const lines = content.split('\n');
-      
-      // 检查每一行是否包含危险命令
-      lines.forEach((line, lineNumber) => {
-        // 跳过空行和注释
-        if (!line.trim() || line.trim().startsWith('#')) return;
-        
-        // 检查高风险命令
-        DANGEROUS_COMMANDS.high.forEach(command => {
-          // 检查是否有安全注释
-          const fullCommand = `${command} /data/adb/*`;
-          const hasSafetyComment = SAFETY_COMMENTS[fullCommand] && line.includes(fullCommand);
-          
-          if (line.includes(command) && !hasSafetyComment) {
-            issues.push({
-              line: lineNumber + 1,
-              command: command,
-              lineContent: line,
-              severity: 'high'
-            });
-          }
-        });
-        
-        // 检查中风险命令
-        DANGEROUS_COMMANDS.medium.forEach(command => {
-          if (line.includes(command)) {
-            issues.push({
-              line: lineNumber + 1,
-              command: command,
-              lineContent: line,
-              severity: 'medium'
-            });
-          }
-        });
-        
-        // 检查低风险命令
-        DANGEROUS_COMMANDS.low.forEach(command => {
-          if (line.includes(command)) {
-            issues.push({
-              line: lineNumber + 1,
-              command: command,
-              lineContent: line,
-              severity: 'low'
-            });
-          }
-        });
-      });
-      
-      return {
-        fileName,
-        issues,
-        content
-      };
-    }
-
     // 分析ZIP文件
     async function analyzeZipFile(file) {
       return new Promise((resolve, reject) => {
@@ -699,6 +618,21 @@
               </div>
             </div>
           `;
+        } else if (result.encrypted) {
+          // 显示加密脚本信息
+          resultsHTML += `
+            <div class="border-b border-gray-200 p-6">
+              <div class="flex items-start">
+                <div class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                  <i class="fa fa-lock text-warning"></i>
+                </div>
+                <div class="flex-grow">
+                  <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
+                  <p class="text-warning text-sm mt-1">此脚本已加密，无法分析其内容</p>
+                </div>
+              </div>
+            </div>
+          `;
         } else {
           // 显示正常结果
           const severityClass = result.issues.length > 0 ? 
@@ -750,76 +684,6 @@
       });
     }
 
-    // 显示文件详情
-    function showFileDetails(result) {
-      modalTitle.textContent = result.fileName;
-      
-      if (result.error) {
-        modalContent.innerHTML = `
-          <p class="text-danger">${result.error}</p>
-        `;
-      } else {
-        if (result.issues.length === 0) {
-          modalContent.innerHTML = `
-            <div class="text-center py-8">
-              <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-                <i class="fa fa-check text-success text-2xl"></i>
-              </div>
-              <h4 class="font-semibold text-gray-800">文件安全</h4>
-              <p class="text-gray-500 mt-2">未检测到任何危险命令</p>
-            </div>
-          `;
-        } else {
-          let issuesHTML = '';
-          
-          result.issues.forEach(issue => {
-            const severityClass = issue.severity === 'high' ? 'bg-danger/10 text-danger' : 
-                                  issue.severity === 'medium' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info';
-            const severityText = issue.severity === 'high' ? '高风险' : 
-                                  issue.severity === 'medium' ? '中风险' : '低风险';
-            
-            // 检查是否有安全注释
-            const fullCommand = `${issue.command} /data/adb/*`;
-            const hasSafetyComment = SAFETY_COMMENTS[fullCommand] && issue.lineContent.includes(fullCommand);
-            
-            issuesHTML += `
-              <div class="mb-4 border border-gray-200 rounded-lg overflow-hidden">
-                <div class="p-3 ${severityClass}">
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium">${severityText}</span>
-                    <span class="text-xs">第 ${issue.line} 行</span>
-                  </div>
-                </div>
-                <div class="p-4">
-                  <p class="text-sm text-gray-700 mb-2">包含危险命令: <code class="bg-gray-100 px-1 py-0.5 rounded text-xs">${issue.command}</code></p>
-                  <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${issue.lineContent}</pre>
-                  ${hasSafetyComment ? `<div class="mt-3 p-2 bg-primary/5 rounded text-xs text-primary">注释: ${SAFETY_COMMENTS[fullCommand]}</div>` : ''}
-                </div>
-              </div>
-            `;
-          });
-          
-          modalContent.innerHTML = `
-            <div class="mb-6">
-              <h5 class="font-semibold text-gray-800 mb-3">检测到的问题</h5>
-              ${issuesHTML}
-            </div>
-            <div>
-              <h5 class="font-semibold text-gray-800 mb-3">文件内容</h5>
-              <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs" style="max-height: 400px;">${result.content}</pre>
-            </div>
-          `;
-        }
-      }
-      
-      modal.classList.remove('hidden');
-    }
-
-    // 关闭模态框
-    function closeModal() {
-      modal.classList.add('hidden');
-    }
-
     // 下载报告
     function downloadReport() {
       // 创建报告内容
@@ -835,6 +699,8 @@
         
         if (result.error) {
           reportContent += `  错误: ${result.error}\n\n`;
+        } else if (result.encrypted) {
+          reportContent += `  状态: 加密脚本\n  此脚本已加密，无法分析其内容\n\n`;
         } else {
           if (result.issues.length === 0) {
             reportContent += `  状态: 安全\n  未检测到任何危险命令\n\n`;
@@ -846,12 +712,14 @@
                                     issue.severity === 'medium' ? '中风险' : '低风险';
               
               // 检查是否有安全注释
-              const fullCommand = `${issue.command} /data/adb/*`;
-              const hasSafetyComment = SAFETY_COMMENTS[fullCommand] && issue.lineContent.includes(fullCommand);
+              const safetyComment = Object.keys(SAFETY_COMMENTS).find(key => 
+                new RegExp(key).test(issue.lineContent)
+              );
               
               reportContent += `  - ${severityText} (第 ${issue.line} 行): ${issue.command}`;
-              reportContent += hasSafetyComment ? ` [注释: ${SAFETY_COMMENTS[fullCommand]}]\n` : '\n';
+              reportContent += safetyComment ? ` [注释: ${SAFETY_COMMENTS[safetyComment]}]\n` : '\n';
               reportContent += `    代码: ${issue.lineContent}\n`;
+              reportContent += `    说明: ${issue.explanation}\n`;
             });
             
             reportContent += "\n";
