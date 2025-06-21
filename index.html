@@ -11,6 +11,13 @@
   <!-- 引入JSZip库用于处理ZIP文件 -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://raw.githubusercontent.com/Tobapuww/Tobapuww.github.io/refs/heads/main/safety-check-improvement.js"></script>
+  <script>
+  // 确保在 DOM 加载完成后执行
+  document.addEventListener('DOMContentLoaded', function() {
+    const results = analyzeShellScript(document.getElementById('command-input').value);
+    // 处理结果
+  });
+</script>
   
   <!-- 配置Tailwind自定义主题 -->
   <script>
