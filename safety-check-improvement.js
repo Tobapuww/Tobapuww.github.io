@@ -351,16 +351,6 @@ function analyzeShellScript(fileName, content) {
         });
     }
     
-    // 字符替换混淆检测
-    if (hasStringConcatenationObfuscation(content)) {
-        issues.push({
-            line: 0,
-            command: '字符串拼接混淆',
-            lineContent: content,
-            severity: 'medium',
-            explanation: '代码中包含字符串拼接模式，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
-        });
-    }
     if (hasExcessiveEscapes(content)) {
         issues.push({
             line: 0,
