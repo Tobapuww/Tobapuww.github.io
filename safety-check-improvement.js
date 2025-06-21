@@ -282,27 +282,6 @@ function hasBase58Encoded(content) {
     return false;
 }
 
-  // 2. 统计字符频率
-  const charFrequency = {};
-  for (const char of cleanedContent) {
-    if (charFrequency[char]) {
-      charFrequency[char]++;
-    } else {
-      charFrequency[char] = 1;
-    }
-  }
-
-  // 3. 找出非 ASCII 可打印字符
-  const unusualChars = Object.entries(charFrequency)
-    .filter(([char, count]) => {
-      const code = char.charCodeAt(0);
-      return code < 32 || code > 126;
-    })
-    .sort((a, b) => b[1] - a[1]); // 按频率降序排列
-
-  return unusualChars;
-}
-
 // 更严格地检测异常转义序列（提高阈值并检查分布）
 function hasExcessiveEscapes(content) {
     // 检测\xXX形式的转义
