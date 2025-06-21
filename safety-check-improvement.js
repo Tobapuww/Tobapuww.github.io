@@ -263,7 +263,7 @@ function analyzeShellScript(fileName, content) {
             command: '代码压缩',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码可能被压缩，增加了代码的可读性难度'
+            explanation: '代码可能被压缩，增加了代码的可读性难度，⚠️我们强烈不建议你执行该脚本！'
         });
     }
     if (hasRenamedVariables(content)) {
@@ -272,7 +272,7 @@ function analyzeShellScript(fileName, content) {
             command: '变量重命名',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度'
+            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
         });
     }
 
@@ -283,7 +283,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base64编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度'
+            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
         });
     }
     if (hasBase58Encoded(content)) {
@@ -292,7 +292,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base58编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度'
+            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度，⚠️除非你非常信任脚本来源，我们强烈不建议你执行该脚本！'
         });
     }
 
