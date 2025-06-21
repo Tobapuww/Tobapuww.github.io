@@ -167,6 +167,7 @@ const COMMAND_EXPLANATIONS = {
   'su': '获取设备最高执行权限（root权限），运行时尤为注意检查脚本全部内容',
   'sed.*-i.*\\/etc\\/passwd': '直接修改系统用户文件，可能导致系统无法登录',
   'killall system_server': '终止Android系统核心服务，导致系统崩溃重启'
+  'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有“>”,">>","tee"字样的命令。</span>',
 };
 
 // 安全注释列表
