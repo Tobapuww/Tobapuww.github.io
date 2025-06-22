@@ -126,7 +126,6 @@ const DANGEROUS_COMMANDS = {
         // 文件操作
         '^(\\s*|.*\\|\\s*)cp(?!.*--remove-destination.*|-f.*)\\b',
         '^(\\s*|.*\\|\\s*)mv(?!.*--remove-destination.*|-f.*)\\b',
-        '^(\\s*|.*\\|\\s*)grep\\b',
         '^(\\s*|.*\\|\\s*)sort\\b',
         '^(\\s*|.*\\|\\s*)uniq\\b',
         '^(\\s*|.*\\|\\s*)head\\b',
