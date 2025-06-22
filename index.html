@@ -7,9 +7,9 @@
   <!-- 引入Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入Font Awesome -->
-  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href="font-awesome.min.css" rel="stylesheet">
   <!-- 引入JSZip库用于处理ZIP文件 -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="jszip.min.js"></script>
 </script>
   
   <!-- 配置Tailwind自定义主题 -->
@@ -63,7 +63,7 @@
     <div class="container mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <i class="fa fa-shield text-primary text-2xl"></i>
-        <h1 class="text-xl font-bold text-dark">Shell脚本安全检测工具</h1>
+        <h1 class="text-xl font-bold text-dark">Android Shell脚本安全检测工具</h1>
       </div>
       <nav>
         <ul class="flex space-x-6">
@@ -75,7 +75,7 @@
     </div>
     <!-- 网站声明 -->
     <div class="bg-primary/10 text-primary text-center py-2 text-sm">
-      <p>本站开源且免费 | 欢迎各网站收录</p>
+      <p>本站开源且免费，由于作者没有自己的服务器，暂时将网站托管在github，造成访问不便，敬请谅解</p>
     </div>
   </header>
 
@@ -196,6 +196,8 @@
         </p>
         <p class="text-gray-600 mb-4">
           此工具完全在浏览器中运行，不会上传您的文件到任何服务器，确保您的代码安全和隐私。
+        <p class="text-gray-600 mb-4">
+          任何脚本都有可能具有风险性，本站仅罗列命令包含的风险，请自行斟酌可信度。
         </p>
         <div class="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
           <h4 class="font-semibold text-primary mb-2">免责声明</h4>
@@ -222,7 +224,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">高风险命令</h4>
               <p class="text-gray-600 text-sm">
-                可能导致系统崩溃、数据丢失或严重安全漏洞的命令，如rm -rf, dd if=/dev/zero, 修改系统配置文件等
+                可能导致系统崩溃、数据丢失或严重安全漏洞的命令，如rm -rf, dd if=/dev/zero, 修改系统配置文件等，⚠️极大可能会使设备永久性损坏
               </p>
             </div>
           </div>
@@ -234,7 +236,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">中风险命令</h4>
               <p class="text-gray-600 text-sm">
-                可能影响系统配置或安全的命令，如chmod, 网络访问命令(wget, curl), 用户管理命令等
+                可能影响系统配置或安全的命令，如chmod, 网络访问命令(wget, curl), 用户管理命令等，错误的执行可能会损坏系统，这些风险是可恢复的，但不承诺会保证数据安全
               </p>
             </div>
           </div>
@@ -246,7 +248,7 @@
             <div>
               <h4 class="font-semibold text-gray-800">低风险命令</h4>
               <p class="text-gray-600 text-sm">
-                可能影响系统性能或资源使用的命令，如系统重启命令, 长时间休眠命令, 文件系统操作等
+                可能影响系统性能或资源使用的命令，如系统重启命令, 长时间休眠命令, 文件系统操作等，极小可能破坏系统结构，但有可能出现数据丢失或泄露
               </p>
             </div>
           </div>
@@ -262,9 +264,9 @@
         <div class="mb-4 md:mb-0">
           <div class="flex items-center space-x-2">
             <i class="fa fa-shield text-primary text-xl"></i>
-            <span class="font-bold text-lg">Shell脚本安全检测工具</span>
+            <span class="font-bold text-lg">Android Shell脚本安全检测工具</span>
           </div>
-          <p class="text-gray-400 text-sm mt-2">保护您的Shell脚本安全</p>
+          <p class="text-gray-400 text-sm mt-2">保护您的设备安全</p>
         </div>
         <div class="flex space-x-6">
           <a href="https://github.com/Tobapuww/Tobapuww.github.io" target="_blank" class="text-gray-400 hover:text-white transition-colors">
