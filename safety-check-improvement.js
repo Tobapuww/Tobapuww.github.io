@@ -7,7 +7,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)rm -rf(?! /data/local/tmp/\\*)\\b',
         '^(\\s*|.*\\|\\s*)rm -fr(?! /data/local/tmp/\\*)\\b',
         '^(\\s*|.*\\|\\s*)rm -f(?! /data/local/tmp/\\*)\\b',
-        '^(\\s*|.*\\|\\s*)dd if\\b',
+        '^(\\s*|.*\\|\\s*)dd if.\\b',
         '^(\\s*|.*\\|\\s*)mkfs.\\b',
         '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*|tee.*)',
         '^(\\s*|.*\\|\\s*)grep\\b.*(>.*|>>.*|<.*|<<.*|tee.*)',
