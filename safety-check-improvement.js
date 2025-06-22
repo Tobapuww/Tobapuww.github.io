@@ -71,31 +71,31 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)dd if=/dev/urandom of=/dev/sda\\b',
         '^(\\s*|.*\\|\\s*)cat /dev/urandom > /dev/null\\b',
         '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b',
-        '^(\\s*|.*\\|\\s*)nandwrite\\b', // 直接写入NAND
-        '^(\\s*|.*\\|\\s*)sfdisk\\b', // 分区表操作
-        '^(\\s*|.*\\|\\s*)parted\\b.*(rm|mkpart|resize)', // 分区管理
+        '^(\\s*|.*\\|\\s*)nandwrite\\b',
+        '^(\\s*|.*\\|\\s*)sfdisk\\b',
+        '^(\\s*|.*\\|\\s*)parted\\b.*(rm|mkpart|resize)',
         
         //  内核/模块操作
-        '^(\\s*|.*\\|\\s*)insmod\\b', // 加载内核模块
-        '^(\\s*|.*\\|\\s*)rmmod\\b', // 卸载内核模块
-        '^(\\s*|.*\\|\\s*)modprobe\\b', // 内核模块管理
+        '^(\\s*|.*\\|\\s*)insmod\\b',
+        '^(\\s*|.*\\|\\s*)rmmod\\b', 
+        '^(\\s*|.*\\|\\s*)modprobe\\b',
         
         //  系统属性修改
-        '^(\\s*|.*\\|\\s*)setprop\\b.*(secure|persist|debug)', // 修改敏感属性
-        '^(\\s*|.*\\|\\s*)resetprop\\b', // Magisk属性重置工具
+        '^(\\s*|.*\\|\\s*)setprop\\b.*(secure|persist|debug)',
+        '^(\\s*|.*\\|\\s*)resetprop\\b',
         
         // 设备映射操作
-        '^(\\s*|.*\\|\\s*)losetup\\b', // 设置循环设备
-        '^(\\s*|.*\\|\\s*)cryptsetup\\b', // 加密设备设置
+        '^(\\s*|.*\\|\\s*)losetup\\b',
+        '^(\\s*|.*\\|\\s*)cryptsetup\\b',
         
         // 瞎jb调试
-        '^(\\s*|.*\\|\\s*)gdb\\b.*--batch\\b', // 批量调试命令
-        '^(\\s*|.*\\|\\s*)strace\\b.*-e\\s+inject', // 系统调用注入
+        '^(\\s*|.*\\|\\s*)gdb\\b.*--batch\\b', //批量调试
+        '^(\\s*|.*\\|\\s*)strace\\b.*-e\\s+inject',
         
         //  系统服务控制
-        '^(\\s*|.*\\|\\s*)stop\\b', // 停止Android服务
-        '^(\\s*|.*\\|\\s*)start\\b', // 启动服务
-        '^(\\s*|.*\\|\\s*)svc\\b', // Android服务控制
+        '^(\\s*|.*\\|\\s*)stop\\b',
+        '^(\\s*|.*\\|\\s*)start\\b',
+        '^(\\s*|.*\\|\\s*)svc\\b',
     ],
     medium: [
         // 文件系统操作
@@ -167,12 +167,12 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)wm\\b', // 窗口管理器控制
         
         //  应用管理
-        '^(\\s*|.*\\|\\s*)pm\\b.*(grant|revoke|set-installer)', // 权限管理
+        '^(\\s*|.*\\|\\s*)pm\\b.*(grant|revoke|set-installer)',
         '^(\\s*|.*\\|\\s*)cmd\\b.*(package|activity)', // 底层包管理
         
         //  调试工具
-        '^(\\s*|.*\\|\\s*)logcat\\b', // 日志查看
-        '^(\\s*|.*\\|\\s*)dmesg\\b', // 内核日志
+        '^(\\s*|.*\\|\\s*)logcat\\b',
+        '^(\\s*|.*\\|\\s*)dmesg\\b',
     ],
     low: [
         // 系统信息
@@ -216,7 +216,7 @@ const DANGEROUS_COMMANDS = {
     ]
 };
 
-// 命令详细解释
+// 命令解释
 const COMMAND_EXPLANATIONS = {
     'netstat': '显示网络连接状态，可能用于探测敏感端口'
 };
