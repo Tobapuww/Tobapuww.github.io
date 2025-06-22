@@ -41,7 +41,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)sed.*-i.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
         '^(\\s*|.*\\|\\s*)awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
 
-        // 权限提升
+        // selinux
         '^(\\s*|.*\\|\\s*)setenforce 0\\b',
 
         // 远程代码执行
@@ -88,7 +88,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)losetup\\b', // 设置循环设备
         '^(\\s*|.*\\|\\s*)cryptsetup\\b', // 加密设备设置
         
-        // 调试工具滥用
+        // 瞎jb调试
         '^(\\s*|.*\\|\\s*)gdb\\b.*--batch\\b', // 批量调试命令
         '^(\\s*|.*\\|\\s*)strace\\b.*-e\\s+inject', // 系统调用注入
         
@@ -221,7 +221,7 @@ const COMMAND_EXPLANATIONS = {
     'netstat': '显示网络连接状态，可能用于探测敏感端口'
 };
 
-// 安全注释列表
+// 命令注释
 const SAFETY_COMMENTS = {
     'insmod': '加载内核模块，可能引入恶意代码或导致系统崩溃',
     'setprop': '修改系统属性，可能破坏系统功能或降低安全性',
@@ -308,15 +308,14 @@ const SAFETY_COMMENTS = {
 
 };
 
-// 更严格地检测代码是否被压缩（提高阈值）
+// 分析代码压缩
 function isCompressedCode(content) {
     const lines = content.split('\n');
     const avgLineLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
-    // 提高阈值到150，并要求行数少于50（避免长脚本被误判）
     return avgLineLength > 150 && lines.length < 50;
 }
 
-// 更严格地检测变量名是否被重命名（增加更多条件）
+// 检测变量重命名
 function hasRenamedVariables(content) {
     const variableRegex = /\b([a-zA-Z_$][0-9a-zA-Z_$]*)\b/g;
     const variables = [];
@@ -324,27 +323,24 @@ function hasRenamedVariables(content) {
     while ((match = variableRegex.exec(content))!== null) {
         variables.push(match[1]);
     }
-    if (variables.length < 10) return false; // 变量太少不做判断
+    if (variables.length < 10) return false; // 变量太少
     const avgLength = variables.reduce((sum, varName) => sum + varName.length, 0) / variables.length;
-    // 要求平均长度小于2.5且短变量占比超过50%
     return avgLength < 2.5 && shortVars / variables.length > 0.5;
 }
 function hasBase64Encoded(content) {
     const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
     const words = content.split(/\s+/);
     
-    // 定义常见单词列表（简化版）
+    // 定义常见单词
     const commonWords = ['the', 'and', 'for', 'this', 'that', 'with', 'have', 'are', 'not'];
     const isCommonWord = word => commonWords.includes(word.toLowerCase());
     
     for (const word of words) {
-        // 排除短字符串和常见单词 - 修复括号问题
         if (word.length < 20 || isCommonWord(word)) continue;
         
         if (base64Regex.test(word)) {
             try {
                 const decoded = atob(word);
-                // 确保解码后不是纯ASCII字符（减少误判）
                 if (/[^\x00-\x7F]/.test(decoded)) return true;
             } catch (error) {
                 continue;
@@ -353,18 +349,16 @@ function hasBase64Encoded(content) {
     }
     return false;
 }
-// 辅助函数：判断是否为常见单词
+// 辅助函数
 function isCommonWord(word) {
     const commonWords = ['the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but'];
     return commonWords.includes(word.toLowerCase());
 }
 
-// 更严格地检测Base58编码（增加长度要求和排除常见标识符）
 function hasBase58Encoded(content) {
     const base58Regex = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
     const words = content.split(/\s+/);
     for (const word of words) {
-        // 排除短字符串和可能的标识符
         if (word.length < 20 || /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(word)) continue;
         if (base58Regex.test(word)) {
             return true;
@@ -373,17 +367,12 @@ function hasBase58Encoded(content) {
     return false;
 }
 
-// 更严格地检测异常转义序列（提高阈值并检查分布）
 function hasExcessiveEscapes(content) {
-    // 检测\xXX形式的转义
     const hexEscapeRegex = /\\x[0-9A-Fa-f]{2}/g;
-    // 检测\uXXXX形式的转义
     const unicodeEscapeRegex = /\\u[0-9A-Fa-f]{4}/g;
     
     const hexEscapes = content.match(hexEscapeRegex) || [];
     const unicodeEscapes = content.match(unicodeEscapeRegex) || [];
-    
-    // 要求转义序列数量超过20，并且分布在至少5行中
     if (hexEscapes.length + unicodeEscapes.length <= 20) return false;
     
     const escapeLines = new Set();
@@ -395,15 +384,12 @@ function hasExcessiveEscapes(content) {
     
     return escapeLines.size > 5;
 }
-
-// 改进的分析函数
 function analyzeShellScript(fileName, content) {
     const issues = [];
 
-    // 按行分割内容
     const lines = content.split('\n');
 
-    // 检查是否为加密脚本
+    // 检查加密脚本
     const isEncrypted = lines.some(line => 
         line.includes('ENC[') || 
         line.includes('openssl enc') || 
@@ -450,24 +436,24 @@ function analyzeShellScript(fileName, content) {
     }
 
     // 检测Base64和Base58编码
-    if (hasBase64Encoded(content)) {
-        issues.push({
-            line: 0,
-            command: 'Base64编码',
-            lineContent: content,
-            severity: 'medium',
-            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
-        });
-    }
-    if (hasBase58Encoded(content)) {
-        issues.push({
-            line: 0,
-            command: 'Base58编码',
-            lineContent: content,
-            severity: 'medium',
-            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
-        });
-    }
+    //if (hasBase64Encoded(content)) {
+        //issues.push({
+            //line: 0,
+            //command: 'Base64编码',
+            //lineContent: content,
+            //severity: 'medium',
+            //explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+        //});
+   // }
+    //if (hasBase58Encoded(content)) {
+        //issues.push({
+            //line: 0,
+            //command: 'Base58编码',
+            //lineContent: content,
+            //severity: 'medium',
+            //explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+        //});
+    //}
 
     // 检查每一行是否包含危险命令
     lines.forEach((line, lineNumber) => {
@@ -616,7 +602,7 @@ if (typeof closeModal !== 'function') {
     }
 }
 
-// 绑定关闭按钮事件
+// 修复详情窗口无法关闭
 window.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
