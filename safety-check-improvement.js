@@ -161,6 +161,32 @@ const DANGEROUS_COMMANDS = {
 
 // 命令详细解释
 const COMMAND_EXPLANATIONS = {
+    'netstat': '显示网络连接状态，可能用于探测敏感端口'
+};
+
+// 安全注释列表
+const SAFETY_COMMENTS = {
+    'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
+    'reboot': '系统重启命令，在适当场景下是安全的',
+    'shutdown -h now': '正常关闭系统，不会造成破坏',
+    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
+    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
+    'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
+    'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
+    'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
+    'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
+    'rm -f /data/local/tmp/*': '清理临时缓存文件，常见于调试脚本',
+    'mount -o ro /dev/sda1 /mnt': '以只读模式挂载分区，无数据篡改风险',
+    'umount -l /mnt': '延迟卸载（lazy unmount），安全解除占用',
+    'ln -s /sdcard/legit /data/local': '创建合法路径软链接，正常功能需求',
+    'wget https://example.com/safe.zip': '单纯下载资源（无管道执行），低风险操作',
+    'curl -O https://repo/file.conf': '下载配置文件到当前目录，安全行为',
+    'adb install /sdcard/update.apk': '安装本地可信APK，正常更新操作',
+    'pm uninstall com.spam.app': '卸载用户安装的第三方应用，无系统影响',
+    'mkdir /data/local/tmp/logs': '创建临时日志目录，调试常用操作',
+    'touch /data/local/tmp/.lockfile': '创建临时锁文件，进程控制机制',
+    'chmod 750 /data/local/bin': '设置目录合理权限（所有者可执行），安全授权',
+    'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为'
     'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
     'reboot autodloader': '展讯设备特有命令，有高概率擦除SPLloader导致设备永久变砖',
     'dd if': '底层磁盘操作命令，指定输入源(if=)，可能用零填充(/dev/zero)或写入恶意二进制破坏存储设备，有些magisk模块通过刷写dtbo或其他分区来实现特殊功能，请确保模块来源可靠',
@@ -196,32 +222,6 @@ const COMMAND_EXPLANATIONS = {
     'pm uninstall': '卸载Android应用包，可能破坏系统应用',
     'adb install': '安装APK文件，可能植入恶意应用',
     // 新增低风险命令解释
-    'netstat': '显示网络连接状态，可能用于探测敏感端口'
-};
-
-// 安全注释列表
-const SAFETY_COMMENTS = {
-    'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
-    'reboot': '系统重启命令，在适当场景下是安全的',
-    'shutdown -h now': '正常关闭系统，不会造成破坏',
-    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
-    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
-    'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
-    'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
-    'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
-    'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
-    'rm -f /data/local/tmp/*': '清理临时缓存文件，常见于调试脚本',
-    'mount -o ro /dev/sda1 /mnt': '以只读模式挂载分区，无数据篡改风险',
-    'umount -l /mnt': '延迟卸载（lazy unmount），安全解除占用',
-    'ln -s /sdcard/legit /data/local': '创建合法路径软链接，正常功能需求',
-    'wget https://example.com/safe.zip': '单纯下载资源（无管道执行），低风险操作',
-    'curl -O https://repo/file.conf': '下载配置文件到当前目录，安全行为',
-    'adb install /sdcard/update.apk': '安装本地可信APK，正常更新操作',
-    'pm uninstall com.spam.app': '卸载用户安装的第三方应用，无系统影响',
-    'mkdir /data/local/tmp/logs': '创建临时日志目录，调试常用操作',
-    'touch /data/local/tmp/.lockfile': '创建临时锁文件，进程控制机制',
-    'chmod 750 /data/local/bin': '设置目录合理权限（所有者可执行），安全授权',
-    'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为'
 };
 
 // 更严格地检测代码是否被压缩（提高阈值）
