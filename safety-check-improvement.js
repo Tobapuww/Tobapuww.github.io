@@ -186,7 +186,7 @@ const SAFETY_COMMENTS = {
     'mkdir /data/local/tmp/logs': '创建临时日志目录，调试常用操作',
     'touch /data/local/tmp/.lockfile': '创建临时锁文件，进程控制机制',
     'chmod 750 /data/local/bin': '设置目录合理权限（所有者可执行），安全授权',
-    'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为'
+    'find /data/log -name "*.old" -delete': '清理过期日志文件，系统维护行为',
     'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
     'reboot autodloader': '展讯设备特有命令，有高概率擦除SPLloader导致设备永久变砖',
     'dd if': '底层磁盘操作命令，指定输入源(if=)，可能用零填充(/dev/zero)或写入恶意二进制破坏存储设备，有些magisk模块通过刷写dtbo或其他分区来实现特殊功能，请确保模块来源可靠',
