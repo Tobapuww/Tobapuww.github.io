@@ -589,7 +589,7 @@
       
       // 计算安全评分
       const safetyScore = totalScannedFiles > 0 ? Math.max(0, Math.round((1 - totalIssues / (totalScannedFiles * 10)) * 100)) : 100;
-      safetyScoreElement.textContent = safetyScore + '%';
+      safetyScoreElement.textContent = safetyScore + '分';
       safetyScoreElement.className = `text-2xl font-bold ${safetyScore >= 80 ? 'text-success' : safetyScore >= 50 ? 'text-warning' : 'text-danger'}`;
       
       // 构建结果列表
