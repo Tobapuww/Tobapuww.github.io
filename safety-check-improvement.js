@@ -7,17 +7,20 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)rm -rf(?! /data/local/tmp/\\*)\\b',
         '^(\\s*|.*\\|\\s*)rm -fr(?! /data/local/tmp/\\*)\\b',
         '^(\\s*|.*\\|\\s*)rm -f(?! /data/local/tmp/\\*)\\b',
-        '^(\\s*|.*\\|\\s*)dd if=/dev/zero\\b',
+        '^(\\s*|.*\\|\\s*)dd if=\\b',
         '^(\\s*|.*\\|\\s*)mkfs.\\b',
-        '^(\\s*|.*\\|\\s*)tee\\b',
-        '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*)',
+        '^(\\s*|.*\\|\\s*)cat\\b.*(>.*|>>.*|<.*|<<.*|tee.*)',
+        '^(\\s*|.*\\|\\s*)grep\\b.*(>.*|>>.*|<.*|<<.*|tee.*)',
         '^(\\s*|.*\\|\\s*)cp\\b.*(--remove-destination.*|-f.*)',
         '^(\\s*|.*\\|\\s*)mv\\b.*(--remove-destination.*|-f.*)',
         '^(\\s*|.*\\|\\s*)find\\s+\\/.*-exec\\s+rm\\b',
         '^(\\s*|.*\\|\\s*)find\\s+\\/.*-delete\\b',
         '^(\\s*|.*\\|\\s*)cd\\s+\\.\\.\\/.*&&.*(rm|chmod|mv|cp)\\b',
         '^(\\s*|.*\\|\\s*)echo\\b.*\\s*[>|>>]\\s*\\/(etc|system|data)\\/',
-
+        
+        // 重启至
+        '^(\\s*|.*\\|\\s*)reboot autodloader\\b',
+        
         // 系统文件修改
         '^(\\s*|.*\\|\\s*)echo.*>/etc/passwd\\b',
         '^(\\s*|.*\\|\\s*)echo.*>/etc/shadow\\b',
@@ -26,10 +29,6 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)awk.*-i inplace.*\\/etc\\/(passwd|shadow|fstab|hosts)\\b',
 
         // 权限提升
-        '^(\\s*|.*\\|\\s*)su\\b',
-        '^(\\s*|.*\\|\\s*)sudo\\b',
-        '^(\\s*|.*\\|\\s*)adb root\\b',
-        '^(\\s*|.*\\|\\s*)adb remount\\b',
         '^(\\s*|.*\\|\\s*)setenforce 0\\b',
 
         // 远程代码执行
@@ -45,9 +44,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*);poweroff\\b',
         '^(\\s*|.*\\|\\s*)killall system_server\\b',
 
-        // 权限设置
-        '^(\\s*|.*\\|\\s*)chmod\\b.*(777|775|000|666)\\b',
-        '^(\\s*|.*\\|\\s*)\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)',
+
 
         // 无限循环
         '^(\\s*|.*\\|\\s*)while true.*\\&\\b',
@@ -82,6 +79,13 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)groupdel\\b',
         '^(\\s*|.*\\|\\s*)passwd\\b',
         '^(\\s*|.*\\|\\s*)usermod\\b',
+        '^(\\s*|.*\\|\\s*)su\\b',
+        '^(\\s*|.*\\|\\s*)sudo\\b',
+        '^(\\s*|.*\\|\\s*)adb root\\b',
+        '^(\\s*|.*\\|\\s*)adb remount\\b',
+        // 权限设置
+        '^(\\s*|.*\\|\\s*)chmod\\b.*(777|775|000|666)\\b',
+        '^(\\s*|.*\\|\\s*)\\bchmod\\b.*000.*(\\/system\\/|\\/data\\/|\\/vendor\\/)',
 
         // 临时目录操作
         '^(\\s*|.*\\|\\s*).*\\/tmp\\/.*\\b',
@@ -158,9 +162,10 @@ const DANGEROUS_COMMANDS = {
 // 命令详细解释
 const COMMAND_EXPLANATIONS = {
     'rm -rf': '递归删除文件和目录，可能导致不可恢复的数据丢失',
-    'dd if=/dev/zero': '低级磁盘操作命令，可能覆盖重要数据',
+    'reboot autodloader': '展讯设备特有命令，有高概率擦除SPLloader导致设备永久变砖',
+    'dd if=': '底层磁盘操作命令，指定输入源(if=)，可能用零填充(/dev/zero)或写入恶意二进制破坏存储设备，有些magisk模块通过刷写dtbo或其他分区来实现特殊功能，请确保模块来源可靠,
     'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
-    'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”',
+    'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”向系统分区写入数据的风险',
     'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
     'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行、应用闪退',
     'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
