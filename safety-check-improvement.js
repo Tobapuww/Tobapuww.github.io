@@ -57,7 +57,32 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)yes.*\\&\\b',
         '^(\\s*|.*\\|\\s*)dd if=/dev/urandom of=/dev/sda\\b',
         '^(\\s*|.*\\|\\s*)cat /dev/urandom > /dev/null\\b',
-        '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b'
+        '^(\\s*|.*\\|\\s*)cat /dev/zero > /dev/null\\b',
+        '^(\\s*|.*\\|\\s*)nandwrite\\b', // 直接写入NAND
+        '^(\\s*|.*\\|\\s*)sfdisk\\b', // 分区表操作
+        '^(\\s*|.*\\|\\s*)parted\\b.*(rm|mkpart|resize)', // 分区管理
+        
+        //  内核/模块操作
+        '^(\\s*|.*\\|\\s*)insmod\\b', // 加载内核模块
+        '^(\\s*|.*\\|\\s*)rmmod\\b', // 卸载内核模块
+        '^(\\s*|.*\\|\\s*)modprobe\\b', // 内核模块管理
+        
+        //  系统属性修改
+        '^(\\s*|.*\\|\\s*)setprop\\b.*(secure|persist|debug)', // 修改敏感属性
+        '^(\\s*|.*\\|\\s*)resetprop\\b', // Magisk属性重置工具
+        
+        // 设备映射操作
+        '^(\\s*|.*\\|\\s*)losetup\\b', // 设置循环设备
+        '^(\\s*|.*\\|\\s*)cryptsetup\\b', // 加密设备设置
+        
+        // 调试工具滥用
+        '^(\\s*|.*\\|\\s*)gdb\\b.*--batch\\b', // 批量调试命令
+        '^(\\s*|.*\\|\\s*)strace\\b.*-e\\s+inject', // 系统调用注入
+        
+        //  系统服务控制
+        '^(\\s*|.*\\|\\s*)stop\\b', // 停止Android服务
+        '^(\\s*|.*\\|\\s*)start\\b', // 启动服务
+        '^(\\s*|.*\\|\\s*)svc\\b', // Android服务控制
     ],
     medium: [
         // 文件系统操作
@@ -116,6 +141,27 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)am start\\b',
         '^(\\s*|.*\\|\\s*)adb install\\b',
         '^(\\s*|.*\\|\\s*)adb uninstall\\b'
+        //  信息收集
+        '^(\\s*|.*\\|\\s*)dumpsys\\b', // 系统服务信息转储
+        '^(\\s*|.*\\|\\s*)getprop\\b', // 获取系统属性
+        '^(\\s*|.*\\|\\s*)pm list\\b.*(granted|permission)', // 应用权限列表
+        
+        //  网络配置
+        '^(\\s*|.*\\|\\s*)iptables\\b', // 防火墙规则设置
+        '^(\\s*|.*\\|\\s*)ip\\b.*(route|link|addr)', // 网络接口配置
+        '^(\\s*|.*\\|\\s*)ndc\\b', // 网络守护进程控制
+        
+        //  系统配置
+        '^(\\s*|.*\\|\\s*)settings\\b.*(global|system)', // Android设置修改
+        '^(\\s*|.*\\|\\s*)wm\\b', // 窗口管理器控制
+        
+        //  应用管理
+        '^(\\s*|.*\\|\\s*)pm\\b.*(grant|revoke|set-installer)', // 权限管理
+        '^(\\s*|.*\\|\\s*)cmd\\b.*(package|activity)', // 底层包管理
+        
+        //  调试工具
+        '^(\\s*|.*\\|\\s*)logcat\\b', // 日志查看
+        '^(\\s*|.*\\|\\s*)dmesg\\b', // 内核日志
     ],
     low: [
         // 系统信息
@@ -166,18 +212,31 @@ const COMMAND_EXPLANATIONS = {
 
 // 安全注释列表
 const SAFETY_COMMENTS = {
+    'insmod': '加载内核模块，可能引入恶意代码或导致系统崩溃',
+    'setprop': '修改系统属性，可能破坏系统功能或降低安全性',
+    'stop': '停止系统核心服务，可能导致功能异常',
+    
+    // ======== 新增中危命令解释 ========
+    'dumpsys': '转储系统服务信息，可能包含敏感数据',
+    'iptables': '修改防火墙规则，可能开放危险端口',
+    'pm grant': '授予应用额外权限，可能扩大攻击面',
+    'logcat': '查看系统日志，可能包含用户隐私信息',
+    
+    // ======== 新增低危命令解释 ========
+    'getprop': '读取系统属性，信息收集行为',
+    'id': '显示用户身份信息',
     'rm -rf /data/adb/*': '删除Magisk模块缓存文件，属于正常清理操作',
-    'reboot': '系统重启命令，在适当场景下是安全的',
-    'shutdown -h now': '正常关闭系统，不会造成破坏',
-    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
-    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查',
+    'reboot': '系统重启命令，在适当场景下是安全的，虽不会造成破坏，但会导致未保存的数据丢失',
+    'shutdown': '正常关闭系统，虽不会造成破坏，但会导致未保存的数据丢失',
+    'chmod 755': '设置文件所有者具有读、写、执行权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查，有些magisk模块将授予附带一些文件权限使其正常，请确保模块来源的可靠性',
+    'chmod 644': '设置文件所有者具有读、写权限，属于正常权限设置，如果被授予的是其他脚本或二进制脚本文件，需要对该脚本进行额外检查，有些magisk模块将授予附带一些文件权限使其正常，请确保模块来源的可靠性',
     'cat(?!.*>.*|.*>>.*)': '查看文件内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
     'echo(?!.*>.*|.*>>.*)': '打印输出内容，正常操作，<span style="color:red">但要额外提防命令中含有">"、">>"、"tee"的命令。</span>',
     'cp(?!.*--remove-destination.*|.*-f.*)': '复制文件，无强制覆盖风险,但部分操作也需要提防，尤其是操作系统文件时',
     'mv(?!.*--remove-destination.*|.*-f.*)': '移动文件，无强制覆盖风险，但部分操作也需要提防，尤其是操作系统文件时',
     'rm -f /data/local/tmp/*': '清理临时缓存文件，常见于调试脚本',
     'mount -o ro /dev/sda1 /mnt': '以只读模式挂载分区，无数据篡改风险',
-    'umount -l /mnt': '延迟卸载（lazy unmount），安全解除占用',
+    'umount -l': '延迟卸载（lazy unmount），安全解除占用',
     'ln -s /sdcard/legit /data/local': '创建合法路径软链接，正常功能需求',
     'wget https://example.com/safe.zip': '单纯下载资源（无管道执行），低风险操作',
     'curl -O https://repo/file.conf': '下载配置文件到当前目录，安全行为',
@@ -192,7 +251,7 @@ const SAFETY_COMMENTS = {
     'dd if': '底层磁盘操作命令，指定输入源(if=)，可能用零填充(/dev/zero)或写入恶意二进制破坏存储设备，有些magisk模块通过刷写dtbo或其他分区来实现特殊功能，请确保模块来源可靠',
     'mkfs.': '格式化文件系统命令，会删除指定磁盘上的所有数据',
     'cat(.*>.*|.*>>.*)': '查看、创建文件或覆盖写入某文件，尤其格外注意命令中带有“>>”或“>”向系统分区写入数据的风险',
-    'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障',
+    'chmod.*(777|775|000|666)': '赋予文件所有人过高或过低权限，存在安全风险或导致系统故障，有些magisk模块将授予附带一些文件权限使其正常，请确保模块来源的可靠性',
     'chmod.*000.*\\/system\\/|\\/data\\/|\\/vendor\\/': '恶意剥夺系统关键目录权限，导致系统无法正常运行、应用闪退',
     'wget.*\\|.*bash': '从网络下载并执行脚本，存在安全风险',
     'while true': '无限循环命令，可能导致系统资源耗尽',
@@ -207,21 +266,23 @@ const SAFETY_COMMENTS = {
     'cd ../ && rm': '通过上级目录跳转执行删除，规避路径监控',
     'echo >/etc/fstab': '覆盖文件系统挂载表，导致系统无法启动',
     'sed -i /etc/hosts': '直接修改DNS解析文件，可能劫持网络流量',
-    'sudo': '临时获取root权限执行命令，高风险操作入口点',
-    'adb remount': '重新挂载系统分区为可写状态，为系统篡改铺路',
-    'setenforce 0': '关闭SELinux安全机制，大幅降低系统防护',
+    'remount': '重新挂载系统分区为可写状态，为系统篡改铺路',
+    'setenforce 0': '使SELinux切换为宽容模式，大幅降低系统防护',
     'python < http': '直接执行远程代码，极可能触发恶意脚本',
     ';reboot': '强制重启系统（使用命令分隔符），中断关键服务',
-    'chmod 000 /system': '剥夺系统目录所有权限，导致系统崩溃',
     'while true &': '后台无限循环，耗尽CPU/内存资源',
-    'dd if=/dev/urandom of=/dev/sda': '用随机数据覆盖磁盘，永久破坏存储设备',
+    'dd if=/dev/* of=/dev/sda': '用随机数据覆盖磁盘分区，不可逆的永久破坏存储设备',
     // 新增中等风险命令解释
     'mount': '挂载存储设备或分区，错误操作可能导致系统崩溃',
     'umount': '卸载已挂载分区，强制卸载可能损坏数据',
     'ln -s': '创建符号链接，可能被用于劫持系统命令路径',
     'pm uninstall': '卸载Android应用包，可能破坏系统应用',
-    'adb install': '安装APK文件，可能植入恶意应用',
+    'pm install': '安装Android应用包，可能植入恶意应用',
     // 新增低风险命令解释
+    'dumpsys battery': '查看电池状态，安全诊断命令',
+    'logcat -c': '清除日志缓存，维护操作',
+    'pm list packages': '列出已安装应用，常规检查',
+    'getprop ro.build.version': '获取系统版本信息，安全查询',
 };
 
 // 更严格地检测代码是否被压缩（提高阈值）
@@ -342,7 +403,7 @@ function analyzeShellScript(fileName, content) {
             command: '代码压缩',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码可能被压缩，增加了代码的可读性难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+            explanation: '代码可能被压缩，增加了代码的可读性难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     if (hasRenamedVariables(content)) {
@@ -351,7 +412,7 @@ function analyzeShellScript(fileName, content) {
             command: '变量重命名',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+            explanation: '代码中的变量名可能被重命名，增加了代码的可读性难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     
@@ -361,7 +422,7 @@ function analyzeShellScript(fileName, content) {
             command: '过多转义序列',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中包含过多转义序列，可能是混淆代码。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+            explanation: '代码中包含过多转义序列，可能是混淆代码。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
 
@@ -372,7 +433,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base64编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+            explanation: '代码中可能存在Base64编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
     if (hasBase58Encoded(content)) {
@@ -381,7 +442,7 @@ function analyzeShellScript(fileName, content) {
             command: 'Base58编码',
             lineContent: content,
             severity: 'medium',
-            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度。⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
+            explanation: '代码中可能存在Base58编码的内容，增加了代码的分析难度。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非您非常信任脚本来源，否则我们强烈不建议你去执行！'
         });
     }
 
@@ -452,7 +513,7 @@ function showFileDetails(result) {
                     <i class="fa fa-lock text-warning text-2xl"></i>
                 </div>
                 <h4 class="font-semibold text-gray-800">加密脚本</h4>
-                <p class="text-gray-500 mt-2">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
+                <p class="text-gray-500 mt-2">此脚本已被加密，我们暂时无法分析其内容。除脚本项有做定义外，任何将脚本命令内容变种的行为都将视为不可靠，⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
             </div>
         `;
     } else if (result.error) {
@@ -501,7 +562,7 @@ function showFileDetails(result) {
                                 ${issue.explanation}
                             </p>
                             <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${issue.lineContent}</pre>
-                            ${safetyComment ? `<div class="mt-3 p-2 bg-primary/5 rounded text-xs text-primary">注释: ${SAFETY_COMMENTS[safetyComment]}</div>` : ''}
+                            ${safetyComment ? `<div class="mt-3 p-2 bg-primary/5 rounded text-xs text-primary">提示: ${SAFETY_COMMENTS[safetyComment]}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -532,7 +593,7 @@ if (typeof closeModal !== 'function') {
     }
 }
 
-// 绑定关闭按钮事件，防止因重复加载脚本或作用域污染导致未绑定
+// 绑定关闭按钮事件
 window.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
