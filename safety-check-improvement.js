@@ -140,7 +140,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)pm uninstall\\b',
         '^(\\s*|.*\\|\\s*)am start\\b',
         '^(\\s*|.*\\|\\s*)adb install\\b',
-        '^(\\s*|.*\\|\\s*)adb uninstall\\b'
+        '^(\\s*|.*\\|\\s*)adb uninstall\\b',
         //  信息收集
         '^(\\s*|.*\\|\\s*)dumpsys\\b', // 系统服务信息转储
         '^(\\s*|.*\\|\\s*)getprop\\b', // 获取系统属性
