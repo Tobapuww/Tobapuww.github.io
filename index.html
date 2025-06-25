@@ -576,169 +576,201 @@
     }
 
     // 显示扫描结果
-    function displayResults(totalIssues) {
-      resultsSection.classList.remove('hidden');
-      
-      // 滚动到结果区域
-      resultsSection.scrollIntoView({ behavior: 'smooth' });
-      
-      // 更新统计信息
-      const totalScannedFiles = scanResults.filter(result => !result.error).length;
-      totalFilesElement.textContent = totalScannedFiles;
-      totalIssuesElement.textContent = totalIssues;
-      
-      // 计算安全评分
-      const safetyScore = totalScannedFiles > 0 ? Math.max(0, Math.round((1 - totalIssues / (totalScannedFiles * 10)) * 100)) : 100;
-      safetyScoreElement.textContent = safetyScore + '分';
-      safetyScoreElement.className = `text-2xl font-bold ${safetyScore >= 80 ? 'text-success' : safetyScore >= 50 ? 'text-warning' : 'text-danger'}`;
-      
-      // 构建结果列表
-      if (scanResults.length === 0) {
-        resultsContainer.innerHTML = `
-          <div class="p-6 text-center text-gray-500">
-            <p>没有扫描到任何文件</p>
-          </div>
-        `;
-        return;
-      }
-      
-      let resultsHTML = '';
-      
-      scanResults.forEach(result => {
-        if (result.error) {
-          // 显示错误信息
-          resultsHTML += `
-            <div class="border-b border-gray-200 p-6">
-              <div class="flex items-start">
-                <div class="w-8 h-8 rounded-full bg-danger/10 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
-                  <i class="fa fa-exclamation-circle text-danger"></i>
-                </div>
-                <div class="flex-grow">
-                  <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
-                  <p class="text-danger text-sm mt-1">${result.error}</p>
-                </div>
-              </div>
-            </div>
-          `;
-        } else if (result.encrypted) {
-          // 显示加密脚本信息
-          resultsHTML += `
-            <div class="border-b border-gray-200 p-6">
-              <div class="flex items-start">
-                <div class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
-                  <i class="fa fa-lock text-warning"></i>
-                </div>
-                <div class="flex-grow">
-                  <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
-                  <p class="text-warning text-sm mt-1">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
-                </div>
-              </div>
-            </div>
-          `;
-        } else {
-          // 显示正常结果
-          const severityClass = result.issues.length > 0 ? 
-            (result.issues.some(issue => issue.severity === 'high') ? 'bg-danger/10 text-danger' : 
-             result.issues.some(issue => issue.severity === 'medium') ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success') : 
-            'bg-success/10 text-success';
-          
-          const severityText = result.issues.length > 0 ? 
-            (result.issues.some(issue => issue.severity === 'high') ? '高风险' : 
-             result.issues.some(issue => issue.severity === 'medium') ? '中风险' : '低风险') : 
-            '安全';
-          
-          resultsHTML += `
-            <div class="border-b border-gray-200 p-6 hover:bg-gray-50 transition-colors">
-              <div class="flex items-start justify-between">
-                <div class="flex items-start">
-                  <div class="w-8 h-8 rounded-full ${severityClass} flex items-center justify-center mr-3 flex-shrink-0 mt-1">
-                    <i class="fa fa-file-text-o"></i>
-                  </div>
-                  <div class="flex-grow">
-                    <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
-                    <div class="flex items-center mt-1">
-                      <span class="text-xs ${severityClass} px-2 py-0.5 rounded-full mr-2">
-                        ${severityText}
-                      </span>
-                      <span class="text-xs text-gray-500">
-                        ${result.issues.length} 个潜在问题
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button class="view-details text-primary hover:text-primary/80 text-sm font-medium" data-index="${scanResults.indexOf(result)}">
-                  查看详情 <i class="fa fa-angle-right ml-1"></i>
-                </button>
-              </div>
-            </div>
-          `;
-        }
-      });
-      
-      resultsContainer.innerHTML = resultsHTML;
-      
-      // 添加查看详情事件监听器
-      document.querySelectorAll('.view-details').forEach(button => {
-        button.addEventListener('click', function() {
-          const index = parseInt(this.getAttribute('data-index'));
-          showFileDetails(scanResults[index]);
+     function displayResults(totalIssues) {
+        resultsSection.classList.remove('hidden');
+        
+        // 滚动到结果区域
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+        
+        // 更新统计信息
+        const totalScannedFiles = scanResults.filter(result => !result.error).length;
+        totalFilesElement.textContent = totalScannedFiles;
+        totalIssuesElement.textContent = totalIssues;
+        
+        // 计算安全评分
+        let safetyScore = 100;
+        let hasHighRisk = false;
+        let hasMediumRisk = false;
+        scanResults.forEach(result => {
+            result.issues.forEach(issue => {
+                if (issue.severity === 'high') {
+                    hasHighRisk = true;
+                } else if (issue.severity === 'medium') {
+                    hasMediumRisk = true;
+                }
+            });
         });
-      });
+        if (hasHighRisk) {
+            safetyScore = 0;
+        } else if (hasMediumRisk) {
+            safetyScore = 50;
+        }
+        safetyScoreElement.textContent = safetyScore + '分';
+        safetyScoreElement.className = `text-2xl font-bold ${safetyScore >= 80 ? 'text-success' : safetyScore >= 50 ? 'text-warning' : 'text-danger'}`;
+        
+        // 构建结果列表
+        if (scanResults.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="p-6 text-center text-gray-500">
+                    <p>没有扫描到任何文件</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let resultsHTML = '';
+        
+        scanResults.forEach(result => {
+            if (result.error) {
+                // 显示错误信息
+                resultsHTML += `
+                    <div class="border-b border-gray-200 p-6">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-danger/10 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                                <i class="fa fa-exclamation-circle text-danger"></i>
+                            </div>
+                            <div class="flex-grow">
+                                <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
+                                <p class="text-danger text-sm mt-1">${result.error}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (result.encrypted) {
+                // 显示加密脚本信息
+                resultsHTML += `
+                    <div class="border-b border-gray-200 p-6">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                                <i class="fa fa-lock text-warning"></i>
+                            </div>
+                            <div class="flex-grow">
+                                <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
+                                <p class="text-warning text-sm mt-1">此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 显示正常结果
+                const severityClass = result.issues.length > 0 ? 
+                    (result.issues.some(issue => issue.severity === 'high') ? 'bg-danger/10 text-danger' : 
+                     result.issues.some(issue => issue.severity === 'medium') ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success') : 
+                    'bg-success/10 text-success';
+                
+                const severityText = result.issues.length > 0 ? 
+                    (result.issues.some(issue => issue.severity === 'high') ? '高风险' : 
+                     result.issues.some(issue => issue.severity === 'medium') ? '中风险' : '低风险') : 
+                    '安全';
+                
+                resultsHTML += `
+                    <div class="border-b border-gray-200 p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start">
+                                <div class="w-8 h-8 rounded-full ${severityClass} flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                                    <i class="fa fa-file-text-o"></i>
+                                </div>
+                                <div class="flex-grow">
+                                    <h4 class="font-semibold text-gray-800">${result.fileName}</h4>
+                                    <div class="flex items-center mt-1">
+                                        <span class="text-xs ${severityClass} px-2 py-0.5 rounded-full mr-2">
+                                            ${severityText}
+                                        </span>
+                                        <span class="text-xs text-gray-500">
+                                            ${result.issues.length} 个潜在问题
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="view-details text-primary hover:text-primary/80 text-sm font-medium" data-index="${scanResults.indexOf(result)}">
+                                查看详情 <i class="fa fa-angle-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        resultsContainer.innerHTML = resultsHTML;
+        
+        // 添加查看详情事件监听器
+        document.querySelectorAll('.view-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                showFileDetails(scanResults[index]);
+            });
+        });
     }
 
     // 下载报告
-    function downloadReport() {
-      // 创建报告内容
-      let reportContent = "Shell脚本安全检测报告\n\n";
-      reportContent += `生成时间: ${new Date().toLocaleString()}\n`;
-      reportContent += `扫描文件总数: ${scanResults.filter(result => !result.error).length}\n`;
-      reportContent += `检测到的危险命令总数: ${totalIssuesElement.textContent}\n`;
-      reportContent += `安全评分: ${safetyScoreElement.textContent}\n\n`;
-      
-      // 添加每个文件的结果
-      scanResults.forEach(result => {
-        reportContent += `文件: ${result.fileName}\n`;
+     function downloadReport() {
+        // 创建报告内容
+        let reportContent = "Shell脚本安全检测报告\n\n";
+        reportContent += `生成时间: ${new Date().toLocaleString()}\n`;
+        reportContent += `扫描文件总数: ${scanResults.filter(result => !result.error).length}\n`;
+        reportContent += `检测到的危险命令总数: ${totalIssuesElement.textContent}\n`;
+        reportContent += `安全评分: ${safetyScoreElement.textContent}\n\n`;
         
-        if (result.error) {
-          reportContent += `  错误: ${result.error}\n\n`;
-        } else if (result.encrypted) {
-          reportContent += `  状态: 加密脚本\n  此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！\n\n`;
-        } else {
-          if (result.issues.length === 0) {
-            reportContent += `  状态: 安全\n  未检测到任何危险命令\n\n`;
-          } else {
-            reportContent += `  状态: 检测到 ${result.issues.length} 个潜在问题\n`;
+        // 添加每个文件的结果
+        scanResults.forEach(result => {
+            reportContent += `文件: ${result.fileName}\n`;
             
-            result.issues.forEach(issue => {
-              const severityText = issue.severity === 'high' ? '高风险' : 
-                                    issue.severity === 'medium' ? '中风险' : '低风险';
-              
-              // 检查是否有安全注释
-              const safetyComment = Object.keys(SAFETY_COMMENTS).find(key => 
-                new RegExp(key).test(issue.lineContent)
-              );
-              
-              reportContent += `  - ${severityText} (第 ${issue.line} 行): ${issue.command}`;
-              reportContent += safetyComment ? ` [注释: ${SAFETY_COMMENTS[safetyComment]}]\n` : '\n';
-              reportContent += `    代码: ${issue.lineContent}\n`;
-              reportContent += `    说明: ${issue.explanation}\n`;
-            });
-            
-            reportContent += "\n";
-          }
-        }
-      });
-      
-      // 创建并下载文件
-      const blob = new Blob([reportContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shell_script_security_report_${new Date().toISOString().slice(0,10)}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+            if (result.error) {
+                reportContent += `  错误: ${result.error}\n\n`;
+            } else if (result.encrypted) {
+                reportContent += `  状态: 加密脚本\n  此脚本已加密，无法分析其内容。⚠️除非你非常信任脚本来源，否则强烈不建议执行该脚本！\n\n`;
+            } else {
+                if (result.issues.length === 0) {
+                    reportContent += `  状态: 安全\n  未检测到任何危险命令\n\n`;
+                } else {
+                    reportContent += `  状态: 检测到 ${result.issues.length} 个潜在问题\n`;
+                    
+                    result.issues.forEach(issue => {
+                        const severityText = issue.severity === 'high' ? '高风险' : 
+                                             issue.severity === 'medium' ? '中风险' : '低风险';
+                        
+                        // 检查是否有安全注释
+                        const safetyComments = [];
+                        Object.keys(SAFETY_COMMENTS).forEach(key => {
+                            if (new RegExp(key).test(issue.lineContent)) {
+                                safetyComments.push(SAFETY_COMMENTS[key]);
+                            }
+                        });
+                        
+                        reportContent += `  - ${severityText} (第 ${issue.line} 行): ${issue.command}`;
+                        if (safetyComments.length > 0) {
+                            reportContent += ` [注释: ${safetyComments.join('; ')}]\n`;
+                        } else {
+                            reportContent += '\n';
+                        }
+                        reportContent += `    代码: ${issue.lineContent}\n`;
+                        const explanations = [];
+                        Object.keys(COMMAND_EXPLANATIONS).forEach(key => {
+                            if (issue.command.includes(key)) {
+                                explanations.push(COMMAND_EXPLANATIONS[key]);
+                            }
+                        });
+                        if (explanations.length > 0) {
+                            reportContent += `    说明: ${explanations.join('; ')}\n`;
+                        } else {
+                            reportContent += `    说明: ${issue.explanation}\n`;
+                        }
+                    });
+                    reportContent += "\n";
+                }
+            }
+        });
+        
+        // 创建并下载文件
+        const blob = new Blob([reportContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `shell_script_security_report_${new Date().toISOString().slice(0,10)}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     // 重置扫描
