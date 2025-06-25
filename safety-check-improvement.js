@@ -30,7 +30,7 @@ const DANGEROUS_COMMANDS = {
         '^(\\s*|.*\\|\\s*)node\\s.*\\b(?:base58|bs58)\\..*decode\\b',
         '^(\\s*|.*\\|\\s*)\\bb58decode\\b',
         '^(\\s*|.*\\|\\s*)\\bdecode_base58\\b',
-        '(?i)(?:echo|printf)\s+(?:"|')?([0-9a-f]{8,})(?:"|')?\s*[|]\s*(?:/.*/)?(?:xxd|busybox\s+xxd)\s+.*?-(?:r[p]?|p[r]?)\b.*?[|]\s*(?:/.*/)?(?:sh|bash|dash|ash|ksh|zsh)\b',
+        '^(\\s*|.*\\|\\s*)xxd \\b',
         
         // 重启至
         '^(\\s*|.*\\|\\s*)reboot autodloader\\b',
